@@ -6,7 +6,7 @@ import (
 	"slices"
 
 	"github.com/jinzhu/copier"
-	"github.com/ligaolin/gin_lin/v2"
+	"github.com/ligaolin/goweb"
 	"gorm.io/gorm"
 )
 
@@ -150,7 +150,7 @@ func (m *Model) Delete(id any) *Model {
 // 生成唯一随机码
 func (m *Model) Code(n int, field string) (string, error) {
 	for {
-		code := gin_lin.GenerateRandomAlphanumeric(n)
+		code := goweb.GenerateRandomAlphanumeric(n)
 		var count int64
 		m.Db.Model(m.Model).Where(field+" = ?", code).Count(&count)
 		if count == 0 {

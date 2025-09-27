@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ligaolin/gin_lin/v2"
-	"github.com/ligaolin/gin_lin/v2/cache"
-	"github.com/ligaolin/gin_lin/v2/email"
+	"github.com/ligaolin/goweb"
+	"github.com/ligaolin/goweb/cache"
+	"github.com/ligaolin/goweb/email"
 )
 
 type Email struct {
@@ -25,7 +25,7 @@ func NewEmail(c *cache.Client, e *email.Email) *Email {
 
 func (c *Email) Generate(email any, expir time.Duration) (string, error) {
 	value := Value{
-		Code:    fmt.Sprintf("%d", gin_lin.Random(6)),
+		Code:    fmt.Sprintf("%d", goweb.Random(6)),
 		Carrier: email.(string),
 	}
 	uuid, err := c.Client.Set("captcha-email", value, expir)

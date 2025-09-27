@@ -1,4 +1,4 @@
-module github.com/ligaolin/gin_lin/v2
+module github.com/ligaolin/goweb
 
 go 1.24.5
 

@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ligaolin/gin_lin/v2"
+	"github.com/ligaolin/goweb"
 )
 
 type Files struct {
@@ -96,7 +96,7 @@ func (f *Files) GetPath(dir string, types string) (string, error) {
 		// 使用提供的路径，去掉文件夹中包含..的目录
 		dir = strings.ReplaceAll(strings.TrimPrefix(dir, "/"), "/..", "")
 		// 路径必须在静态目录下
-		if !gin_lin.StringPreIs(dir, f.Config.Static) {
+		if !goweb.StringPreIs(dir, f.Config.Static) {
 			return "", errors.New("您上传的路径不符合规范")
 		}
 	}
@@ -231,7 +231,7 @@ func (f *Files) Delete(path string, name string) error {
 		// 使用提供的路径，去掉文件夹中包含..的目录
 		path = strings.ReplaceAll(strings.TrimPrefix(path, "/"), "/..", "")
 		// 路径必须在静态目录下
-		if !gin_lin.StringPreIs(path, f.Config.Static) {
+		if !goweb.StringPreIs(path, f.Config.Static) {
 			return errors.New("您要删除的路径不符合规范")
 		}
 	}

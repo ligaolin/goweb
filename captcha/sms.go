@@ -9,9 +9,9 @@ import (
 	dysmsapi20170525 "github.com/alibabacloud-go/dysmsapi-20170525/v5/client"
 	"github.com/alibabacloud-go/tea-utils/v2/service"
 	"github.com/alibabacloud-go/tea/tea"
-	"github.com/ligaolin/gin_lin/v2"
-	"github.com/ligaolin/gin_lin/v2/cache"
-	"github.com/ligaolin/gin_lin/v2/sdk/ali"
+	"github.com/ligaolin/goweb"
+	"github.com/ligaolin/goweb/cache"
+	"github.com/ligaolin/goweb/sdk/ali"
 )
 
 type Sms struct {
@@ -28,7 +28,7 @@ func NewSms(c *cache.Client, a *ali.AliSms) *Sms {
 
 func (s *Sms) Generate(mobile any, expir time.Duration) (string, error) {
 	value := Value{
-		Code:    fmt.Sprintf("%d", gin_lin.Random(6)),
+		Code:    fmt.Sprintf("%d", goweb.Random(6)),
 		Carrier: mobile.(string),
 	}
 	uuid, err := s.Client.Set("captcha-sms", value, expir)

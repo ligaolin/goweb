@@ -7,7 +7,7 @@ import (
 	"github.com/go-pay/gopay"
 	"github.com/go-pay/gopay/wechat/v3"
 	"github.com/go-pay/xlog"
-	"github.com/ligaolin/gin_lin/v2"
+	"github.com/ligaolin/goweb"
 )
 
 type WechatPayConfig struct {
@@ -83,5 +83,5 @@ func (wm *WechatMerchant) NativePay(c context.Context, tradeNo string, descripti
 
 // 生成商户订单号
 func GenerateOutTradeNo() string {
-	return gin_lin.GenerateRandomAlphanumeric(22)
+	return goweb.GenerateRandomAlphanumeric(22)
 }

@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ligaolin/gin_lin/v2/cache"
+	"github.com/ligaolin/goweb/cache"
 	"github.com/mojocn/base64Captcha"
 )
 
