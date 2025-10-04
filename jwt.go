@@ -8,8 +8,8 @@ import (
 )
 
 type JwtConfig struct {
-	Expir  int64  `json:"expir" toml:"expir" yaml:"expir"` // jwt登录过期时间，分钟，1440一天
-	Issuer string `json:"issuer" toml:"issuer" yaml:"issuer"`
+	Expir  int64 // jwt登录过期时间，分钟，1440一天
+	Issuer string
 }
 
 type Claims struct {

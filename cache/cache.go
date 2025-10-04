@@ -20,18 +20,18 @@ type Cache interface {
 }
 
 type Config struct {
-	Use   string       `json:"use" toml:"use" yaml:"use"`
-	File  *FileConfig  `json:"file" toml:"file" yaml:"file"`
-	Redis *RedisConfig `json:"redis" toml:"redis" yaml:"redis"`
+	Use   string
+	File  *FileConfig
+	Redis *RedisConfig
 }
 
 type FileConfig struct {
-	Path string `json:"path" toml:"path" yaml:"path"`
+	Path string
 }
 
 type RedisConfig struct {
-	Addr     string `json:"addr" toml:"addr" yaml:"addr"`
-	Password string `json:"password" toml:"password" yaml:"password"`
+	Addr     string
+	Password string
 }
 
 func New(config *Config) Cache {

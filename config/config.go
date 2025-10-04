@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/BurntSushi/toml"
-	"gopkg.in/yaml.v3"
+	"sigs.k8s.io/yaml"
 )
 
 // LoadConfig 从指定路径加载配置文件，并绑定到cfg上

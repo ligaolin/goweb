@@ -7,11 +7,11 @@ import (
 )
 
 type EmailConfig struct {
-	Smtp     string `json:"smtp" toml:"smtp" yaml:"smtp"`
-	Port     int    `json:"port" toml:"port" yaml:"port"`
-	Email    string `json:"email" toml:"email" yaml:"email"`
-	Password string `json:"password" toml:"password" yaml:"password"`
-	FromName string `json:"from_name" toml:"from_name" yaml:"from_name"` // 发件人名称
+	Smtp     string
+	Port     int
+	Email    string
+	Password string
+	FromName string
 }
 
 type Email struct {

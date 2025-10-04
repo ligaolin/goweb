@@ -12,10 +12,10 @@ type AliSms struct {
 }
 
 type AliSmsConfig struct {
-	AccessKeyId                  string `json:"access_key_id" toml:"access_key_id" yaml:"access_key_id"`
-	AccessKeySecret              string `json:"access_key_secret" toml:"access_key_secret" yaml:"access_key_secret"`
-	TemplateCodeVerificationCode string `json:"template_code_verification_code" toml:"template_code_verification_code" yaml:"template_code_verification_code"`
-	SignName                     string `json:"sign_name" toml:"sign_name" yaml:"sign_name"`
+	AccessKeyId                  string
+	AccessKeySecret              string
+	TemplateCodeVerificationCode string
+	SignName                     string
 }
 
 func NewAliSms(cfg *AliSmsConfig) (*AliSms, error) {
