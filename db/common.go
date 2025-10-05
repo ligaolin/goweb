@@ -22,7 +22,7 @@ type ListParamBase struct {
 }
 
 type ModelID struct {
-	ID int32 `gorm:"column:id;primaryKey;type:autoIncrement;comment:ID" json:"id"`
+	ID int32 `gorm:"column:id;primaryKey;autoIncrement;comment:ID" json:"id"`
 }
 
 type ModelCreatedAt struct {
