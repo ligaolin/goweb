@@ -4,14 +4,13 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
-	"time"
 )
 
 type Where struct {
-	Name     string
-	Op       string
-	Value    any
-	Nullable bool
+	Name     string // 字段名
+	Op       string // 操作符
+	Value    any    // 条件值
+	Nullable bool   // 是否允许为空值
 }
 
 // 将 Where 结构体转换为安全的 SQL where 子句和参数
@@ -21,7 +20,7 @@ func (m *Model) Where(data []Where) *Model {
 	}
 
 	for _, v := range data {
-		if v.Nullable || (!v.Nullable && !isNilOrEmpty(v.Value)) {
+		if v.Nullable || (!v.Nullable && !IsZero(v.Value)) {
 			switch strings.ToUpper(v.Op) {
 			case "IN":
 				m.Db = m.Db.Where(fmt.Sprintf("%s IN ?", v.Name), v.Value)
@@ -39,6 +38,9 @@ func (m *Model) Where(data []Where) *Model {
 				m.Db = m.Db.Where(fmt.Sprintf("%s %s ?", v.Name, v.Op), v.Value)
 			case "BETWEEN":
 				if values, ok := v.Value.([]any); ok && len(values) == 2 {
+					if !v.Nullable && (IsZero(values[0]) || IsZero(values[1])) {
+						continue
+					}
 					m.Db = m.Db.Where(fmt.Sprintf("%s BETWEEN ? AND ?", v.Name), values[0], values[1])
 				} else {
 					m.Error = fmt.Errorf("BETWEEN requires a slice of 2 values")
@@ -53,38 +55,21 @@ func (m *Model) Where(data []Where) *Model {
 	return m
 }
 
-// isNilOrEmpty 判断 Value 是否为 nil 或空值
-func isNilOrEmpty(value any) bool {
+// isNilOrEmpty 判断 Value 是否为 nil 或空值（使用 IsZero 优化）
+func IsZero(value any) bool {
 	if value == nil {
 		return true
 	}
+
 	v := reflect.ValueOf(value)
-	// 如果是指针，解引用
+
+	// 处理指针类型
 	if v.Kind() == reflect.Ptr {
 		if v.IsNil() {
 			return true
 		}
 		v = v.Elem()
 	}
-	switch v.Kind() {
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return v.Int() == 0
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return v.Uint() == 0
-	case reflect.Float32, reflect.Float64:
-		return v.Float() == 0
-	case reflect.String:
-		return v.String() == ""
-	case reflect.Slice, reflect.Array, reflect.Map:
-		return v.Len() == 0
-	case reflect.Bool:
-		return !v.Bool()
-	case reflect.Struct:
-		if t, ok := value.(time.Time); ok {
-			return t.IsZero()
-		}
-		return false // 其他结构体默认非空
-	default:
-		return false
-	}
+
+	return v.IsZero()
 }
