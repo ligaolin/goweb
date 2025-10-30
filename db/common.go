@@ -42,7 +42,7 @@ type ModelSort struct {
 }
 
 type ModelState struct {
-	State string `gorm:"column:state;type:enum('开启','关闭');default:'开启';comment:状态" json:"state"`
+	State int32 `gorm:"column:state;type:tinyint(1);default:1;comment:状态:1-开启,2-关闭" json:"state"`
 }
 
 type ModelHasChildren struct {
