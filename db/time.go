@@ -31,6 +31,9 @@ func (t Time) ToString() string {
 }
 
 func (t Time) Value() (driver.Value, error) {
+	if time.Time(t).IsZero() {
+		return nil, nil
+	}
 	return time.Time(t), nil
 }
 
@@ -40,4 +43,8 @@ func (t *Time) Scan(v any) error {
 		return nil
 	}
 	return fmt.Errorf("can not convert %v to timestamp", v)
+}
+
+func (t Time) Time() time.Time {
+	return time.Time(t)
 }
