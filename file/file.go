@@ -175,18 +175,9 @@ func (f *Files) List(param ListParam) (*ListRes, error) {
 	if err != nil {
 		return nil, err
 	}
-	var (
-		start = (param.Page - 1) * param.PageSize // 开始位置
-		end   = start + param.PageSize            // 结束位置
-		list  []File
-	)
-	if end > len(files)-1 {
-		end = len(files)
-	}
-	if start > len(files)-1 {
-		start = max(len(files)-1, 0)
-	}
-	for _, v := range files[start:end] {
+	var list []File
+	total, _, res := goweb.List(int32(param.Page), int32(param.PageSize), files)
+	for _, v := range res {
 		info, err := v.Info()
 		if err != nil {
 			return nil, err
@@ -220,7 +211,7 @@ func (f *Files) List(param ListParam) (*ListRes, error) {
 			Mime:      mime,
 		})
 	}
-	return &ListRes{Data: list, Total: int64(len(files))}, nil
+	return &ListRes{Data: list, Total: total}, nil
 }
 
 func (f *Files) Delete(path string, name string) error {
