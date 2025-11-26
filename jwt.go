@@ -10,6 +10,7 @@ import (
 type JwtConfig struct {
 	Expir  int64 // jwt登录过期时间，分钟，1440一天
 	Issuer string
+	Sign   string
 }
 
 type Claims struct {
@@ -37,7 +38,7 @@ func (j *Jwt) Set(id int32, types string) (string, error) {
 			Issuer:    j.Config.Issuer,
 		},
 	}
-	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte("AllYourBase"))
+	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(j.Config.Sign))
 }
 
 func (j *Jwt) Get(t string, claims *Claims) error {
@@ -45,7 +46,7 @@ func (j *Jwt) Get(t string, claims *Claims) error {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("身份信无效或已过期")
 		}
-		return []byte("AllYourBase"), nil
+		return []byte(j.Config.Sign), nil
 	})
 	if err != nil {
 		return err
