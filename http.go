@@ -116,12 +116,12 @@ func (h *Http) Get(params url.Values, result any) error {
 }
 
 // PostForm 发送表单数据
-func (h *Http) PostForm(path string, formData url.Values, result any) error {
+func (h *Http) PostForm(formData url.Values, result any) error {
 	headers := map[string]string{
 		"Content-Type": "application/x-www-form-urlencoded",
 	}
 
-	data, err := h.Do("POST", path, headers, strings.NewReader(formData.Encode()))
+	data, err := h.Do("", "POST", headers, strings.NewReader(formData.Encode()))
 	if err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func (h *Http) PostJSON(jsonData any, result any) error {
 		"Content-Type": "application/json",
 	}
 
-	data, err := h.Do("POST", "", headers, bytes.NewReader(body))
+	data, err := h.Do("", "POST", headers, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
