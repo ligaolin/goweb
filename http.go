@@ -136,7 +136,7 @@ func (h *Http) PostForm(path string, formData url.Values, result any) error {
 }
 
 // PostJSON 发送JSON数据
-func (h *Http) PostJSON(path string, jsonData any, result any) error {
+func (h *Http) PostJSON(jsonData any, result any) error {
 	var body []byte
 	var err error
 
@@ -151,7 +151,7 @@ func (h *Http) PostJSON(path string, jsonData any, result any) error {
 		"Content-Type": "application/json",
 	}
 
-	data, err := h.Do("POST", path, headers, bytes.NewReader(body))
+	data, err := h.Do("POST", "", headers, bytes.NewReader(body))
 	if err != nil {
 		return err
 	}
