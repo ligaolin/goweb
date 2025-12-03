@@ -1,6 +1,7 @@
 package goweb
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -12,130 +13,152 @@ import (
 )
 
 type Http struct {
-	Url     string
-	Client  *http.Client
-	Headers map[string]string
-	Timeout time.Duration
-	Error   error
+	Url            string // 存储基础URL
+	Client         *http.Client
+	defaultHeaders map[string]string
+	timeout        time.Duration
 }
 
-// NewHttp 创建一个新的HTTP客户端实例
 func NewHttp(url string) *Http {
 	return &Http{
-		Url:     url,
-		Client:  &http.Client{},
-		Headers: make(map[string]string),
-		Timeout: 30 * time.Second,
+		Url:            url,
+		Client:         &http.Client{},
+		defaultHeaders: make(map[string]string),
+		timeout:        30 * time.Second,
 	}
 }
 
-// SetTimeout 设置请求超时时间
+// SetTimeout 设置超时时间
 func (h *Http) SetTimeout(timeout time.Duration) *Http {
-	h.Timeout = timeout
+	h.timeout = timeout
 	return h
 }
 
-// SetHeader 设置请求头
+// SetDefaultHeader 设置默认请求头
 func (h *Http) SetHeader(key, value string) *Http {
-	h.Headers[key] = value
+	h.defaultHeaders[key] = value
+	return h
+}
+
+// ClearDefaultHeaders 清除默认请求头
+func (h *Http) ClearDefaultHeaders() *Http {
+	h.defaultHeaders = make(map[string]string)
 	return h
 }
 
 // Do 执行HTTP请求
-func (h *Http) Do(method string, body io.Reader) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), h.Timeout)
+func (h *Http) Do(urlPath string, method string, headers map[string]string, body io.Reader) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), h.timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, method, h.Url, body)
+	req, err := http.NewRequestWithContext(ctx, method, h.Url+urlPath, body)
 	if err != nil {
-		h.Error = err
-		return nil, fmt.Errorf("创建请求失败: %v", err)
+		return nil, fmt.Errorf("创建请求失败: %w", err)
 	}
 
-	// 设置请求头
-	for key, value := range h.Headers {
+	// 设置默认请求头
+	for key, value := range h.defaultHeaders {
 		req.Header.Set(key, value)
 	}
 
-	// 如果没有设置Content-Type，默认设置为application/x-www-form-urlencoded
+	// 设置本次请求特定的请求头
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	// 如果请求体不为空且未设置Content-Type，设置默认值
 	if body != nil && req.Header.Get("Content-Type") == "" {
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	}
 
 	resp, err := h.Client.Do(req)
 	if err != nil {
-		h.Error = err
 		if ctx.Err() == context.DeadlineExceeded {
-			return nil, fmt.Errorf("请求超时（%v）: %v", h.Timeout, err)
+			return nil, fmt.Errorf("请求超时（%v）: %w", h.timeout, err)
 		}
-		return nil, fmt.Errorf("请求失败: %v", err)
+		return nil, fmt.Errorf("请求失败: %w", err)
 	}
 	defer resp.Body.Close()
 
-	// 读取响应体
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		h.Error = err
-		return nil, fmt.Errorf("读取响应失败: %v", err)
+		return nil, fmt.Errorf("读取响应失败: %w", err)
 	}
 
-	// 检查响应状态码
+	// 检查HTTP状态码
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		h.Error = fmt.Errorf("请求返回错误状态码: %d, 响应内容: %s", resp.StatusCode, string(respBody))
-		return respBody, h.Error
+		return respBody, fmt.Errorf("HTTP %d: %s", resp.StatusCode, http.StatusText(resp.StatusCode))
 	}
 
 	return respBody, nil
 }
 
-// Get 发送GET请求
-func Get(url string, params url.Values, result any) error {
-	httpClient := NewHttp(url)
-
-	// 如果有参数，添加到URL
+// Get 执行GET请求
+func (h *Http) Get(params url.Values, result any) error {
+	// 构建查询字符串
+	queryString := ""
 	if len(params) > 0 {
-		if strings.Contains(url, "?") {
-			httpClient.Url += "&" + params.Encode()
-		} else {
-			httpClient.Url += "?" + params.Encode()
-		}
+		queryString = "?" + params.Encode()
 	}
 
-	data, err := httpClient.Do("GET", nil)
+	data, err := h.Do(queryString, "GET", nil, nil)
 	if err != nil {
 		return err
 	}
 
-	// 如果需要解析结果
 	if result != nil {
 		if err := json.Unmarshal(data, result); err != nil {
-			return fmt.Errorf("解析JSON失败: %v, 响应内容: %s", err, string(data))
+			return fmt.Errorf("解析JSON失败: %w, 响应内容: %s", err, string(data))
 		}
 	}
 
 	return nil
 }
 
-// PostJSON 发送JSON格式的POST请求
-func PostJSON(url string, data any, result any) error {
-	httpClient := NewHttp(url)
-	httpClient.SetHeader("Content-Type", "application/json")
-
-	// 将数据序列化为JSON
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Errorf("序列化JSON失败: %v", err)
+// PostForm 发送表单数据
+func (h *Http) PostForm(path string, formData url.Values, result any) error {
+	headers := map[string]string{
+		"Content-Type": "application/x-www-form-urlencoded",
 	}
 
-	responseData, err := httpClient.Do("POST", strings.NewReader(string(jsonData)))
+	data, err := h.Do("POST", path, headers, strings.NewReader(formData.Encode()))
 	if err != nil {
 		return err
 	}
 
-	// 如果需要解析结果
 	if result != nil {
-		if err := json.Unmarshal(responseData, result); err != nil {
-			return fmt.Errorf("解析JSON失败: %v, 响应内容: %s", err, string(responseData))
+		if err := json.Unmarshal(data, result); err != nil {
+			return fmt.Errorf("解析JSON失败: %w, 响应内容: %s", err, string(data))
+		}
+	}
+
+	return nil
+}
+
+// PostJSON 发送JSON数据
+func (h *Http) PostJSON(path string, jsonData any, result any) error {
+	var body []byte
+	var err error
+
+	if jsonData != nil {
+		body, err = json.Marshal(jsonData)
+		if err != nil {
+			return fmt.Errorf("序列化JSON失败: %w", err)
+		}
+	}
+
+	headers := map[string]string{
+		"Content-Type": "application/json",
+	}
+
+	data, err := h.Do("POST", path, headers, bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+
+	if result != nil {
+		if err := json.Unmarshal(data, result); err != nil {
+			return fmt.Errorf("解析JSON失败: %w, 响应内容: %s", err, string(data))
 		}
 	}
 
