@@ -12,23 +12,13 @@ type Response struct {
 	Writer  http.ResponseWriter `json:"-"`
 }
 
-var res *Response
-
 func NewResponse(w http.ResponseWriter) *Response {
-	if res != nil {
-		res.Message = "success"
-		res.Code = 200
-		res.Data = nil
-		res.Writer = w
-	} else {
-		res = &Response{
-			Message: "success",
-			Code:    200,
-			Data:    nil,
-			Writer:  w,
-		}
+	return &Response{
+		Message: "success",
+		Code:    200,
+		Data:    nil,
+		Writer:  w,
 	}
-	return res
 }
 
 func (r *Response) Response() {
