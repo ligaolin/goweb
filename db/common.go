@@ -26,23 +26,23 @@ type ModelID struct {
 }
 
 type ModelCreatedAt struct {
-	CreatedAt Time `gorm:"column:created_at;type:datetime(3);autoCreateTime:milli;comment:创建时间" json:"created_at"`
+	CreatedAt Time `gorm:"column:created_at;autoCreateTime:milli;comment:创建时间" json:"created_at"`
 }
 
 type ModelUpdatedAt struct {
-	UpdatedAt Time `gorm:"column:updated_at;type:datetime(3);autoUpdateTime:milli;comment:更新时间" json:"updated_at"`
+	UpdatedAt Time `gorm:"column:updated_at;autoUpdateTime:milli;comment:更新时间" json:"updated_at"`
 }
 
 type ModelDeleteAt struct {
-	DeleteAt Time `gorm:"column:delete_at;type:datetime(3);comment:删除时间" json:"delete_at"`
+	DeleteAt Time `gorm:"column:delete_at;comment:删除时间" json:"delete_at"`
 }
 
 type ModelSort struct {
-	Sort int32 `gorm:"column:sort;type:bigint(11);default:100;comment:排序" json:"sort"`
+	Sort int32 `gorm:"column:sort;type:bigint;default:100;comment:排序" json:"sort"`
 }
 
 type ModelState struct {
-	State int32 `gorm:"column:state;type:tinyint(1);default:1;comment:状态:1-开启,2-关闭" json:"state"`
+	State int32 `gorm:"column:state;type:int;default:1;comment:状态:1-开启,2-关闭" json:"state"`
 }
 
 type ModelHasChildren struct {
@@ -50,7 +50,7 @@ type ModelHasChildren struct {
 }
 
 type ModelChildren[T any] struct {
-	PID      int32 `gorm:"column:pid;type:bigint(20);default:0;comment:父级id" json:"pid"`
-	Level    int32 `gorm:"column:level;type:tinyint(1);default:1;comment:层级" json:"level"`
+	PID      int32 `gorm:"column:pid;type:bigint;default:0;comment:父级id" json:"pid"`
+	Level    int32 `gorm:"column:level;type:int;default:1;comment:层级" json:"level"`
 	Children []T   `gorm:"-:migration;foreignKey:pid;references:id" json:"children"`
 }
