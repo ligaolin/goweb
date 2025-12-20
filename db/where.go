@@ -21,7 +21,7 @@ func (m *Model) Where(data []Where) *Model {
 	}
 
 	for _, v := range data {
-		if v.Value != nil {
+		if v.Value == nil {
 			continue
 		}
 		if v.Nullable || (!v.Nullable && !IsZero(v.Value)) {
