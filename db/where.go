@@ -23,21 +23,23 @@ func (m *Model) Where(data []Where) *Model {
 	for _, v := range data {
 		if (v.Nullable && !IsAnyNil(v.Value)) || (!v.Nullable && !IsZero(v.Value)) {
 			upperOp := strings.ToUpper(v.Op)
+			// 对值进行安全解引用
+			realValue := getRealValue(v.Value)
 			switch upperOp {
 			case "IN":
-				m.Db = m.Db.Where(fmt.Sprintf("%s IN ?", v.Name), v.Value)
+				m.Db = m.Db.Where(fmt.Sprintf("%s IN ?", v.Name), realValue)
 			case "LIKE", "NOT LIKE":
-				m.Db = m.Db.Where(fmt.Sprintf("%s %s ?", v.Name, upperOp), fmt.Sprintf("%%%s%%", v.Value))
+				m.Db = m.Db.Where(fmt.Sprintf("%s %s ?", v.Name, upperOp), fmt.Sprintf("%%%s%%", realValue))
 			case "IS NULL":
 				m.Db = m.Db.Where(fmt.Sprintf("%s IS NULL", v.Name))
 			case "IS NOT NULL":
 				m.Db = m.Db.Where(fmt.Sprintf("%s IS NOT NULL", v.Name))
 			case "FIND_IN_SET":
-				m.Db = m.Db.Where("FIND_IN_SET(?, ?)", v.Value, v.Name) // 注意参数顺序：FIND_IN_SET(值, 字段)
+				m.Db = m.Db.Where("FIND_IN_SET(?, ?)", realValue, v.Name) // 注意参数顺序：FIND_IN_SET(值, 字段)
 			case "!=", ">", ">=", "<", "<=":
-				m.Db = m.Db.Where(fmt.Sprintf("%s %s ?", v.Name, upperOp), v.Value)
+				m.Db = m.Db.Where(fmt.Sprintf("%s %s ?", v.Name, upperOp), realValue)
 			case "BETWEEN":
-				values, ok := v.Value.([]any)
+				values, ok := realValue.([]any)
 				if !ok || len(values) != 2 {
 					m.Error = errors.New("BETWEEN requires a slice of 2 values")
 					return m
@@ -47,12 +49,29 @@ func (m *Model) Where(data []Where) *Model {
 				}
 				m.Db = m.Db.Where(fmt.Sprintf("%s BETWEEN ? AND ?", v.Name), values[0], values[1])
 			default:
-				m.Db = m.Db.Where(fmt.Sprintf("%s = ?", v.Name), v.Value)
+				m.Db = m.Db.Where(fmt.Sprintf("%s = ?", v.Name), realValue)
 			}
 		}
 	}
 
 	return m
+}
+
+// 新增：安全解引用函数，获取指针指向的实际值
+func getRealValue(value any) any {
+	if value == nil {
+		return ""
+	}
+
+	v := reflect.ValueOf(value)
+	// 递归解引用所有指针/接口，直到拿到基础类型
+	for v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface {
+		if v.IsNil() {
+			return "" // 空指针返回空字符串
+		}
+		v = v.Elem()
+	}
+	return v.Interface()
 }
 
 func IsAnyNil(a any) bool {
