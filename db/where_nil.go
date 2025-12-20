@@ -10,7 +10,7 @@ import (
 type WhereNil struct {
 	Name  string // 字段名
 	Op    string // 操作符
-	Value *any
+	Value any
 }
 
 func (m *Model) WhereNil(data *[]WhereNil) *Model {
@@ -59,7 +59,7 @@ func (m *Model) WhereNil(data *[]WhereNil) *Model {
 					continue
 				}
 				m.Db = m.Db.Where(fmt.Sprintf("%s BETWEEN ? AND ?", v.Name), values[0], values[1])
-			default: // = 操作符
+			default:
 				// 特殊处理：如果实际值是nil（如指针nil），转为IS NULL
 				if IsZero(actualValue) && reflect.ValueOf(v.Value).Kind() == reflect.Ptr {
 					m.Db = m.Db.Where(fmt.Sprintf("%s IS NULL", v.Name))
@@ -81,7 +81,7 @@ func getActualValue(value any) any {
 
 	v := reflect.ValueOf(value)
 	// 循环解引用所有层级的指针
-	for v.Kind() == reflect.Ptr {
+	for v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return nil // 指针nil，返回nil
 		}
