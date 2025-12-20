@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -21,33 +22,45 @@ func (m *Model) Where(data []Where) *Model {
 
 	for _, v := range data {
 		if v.Nullable || (!v.Nullable && !IsZero(v.Value)) {
-			switch strings.ToUpper(v.Op) {
+			upperOp := strings.ToUpper(v.Op)
+			switch upperOp {
 			case "IN":
+				if !v.Nullable && IsZero(v.Value) {
+					continue
+				}
 				m.Db = m.Db.Where(fmt.Sprintf("%s IN ?", v.Name), v.Value)
-			case "LIKE":
-				m.Db = m.Db.Where(fmt.Sprintf("%s LIKE ?", v.Name), fmt.Sprintf("%%%s%%", v.Value))
-			case "NOT LIKE":
-				m.Db = m.Db.Where(fmt.Sprintf("%s NOT LIKE ?", v.Name), fmt.Sprintf("%%%s%%", v.Value))
+			case "LIKE", "NOT LIKE":
+				if !v.Nullable && IsZero(v.Value) {
+					continue
+				}
+				m.Db = m.Db.Where(fmt.Sprintf("%s %s ?", v.Name, upperOp), fmt.Sprintf("%%%s%%", v.Value))
 			case "IS NULL":
 				m.Db = m.Db.Where(fmt.Sprintf("%s IS NULL", v.Name))
 			case "IS NOT NULL":
 				m.Db = m.Db.Where(fmt.Sprintf("%s IS NOT NULL", v.Name))
 			case "FIND_IN_SET":
-				m.Db.Where("FIND_IN_SET(?, ?)", v.Name, v.Value)
+				if !v.Nullable && IsZero(v.Value) {
+					continue
+				}
+				m.Db = m.Db.Where("FIND_IN_SET(?, ?)", v.Value, v.Name) // 注意参数顺序：FIND_IN_SET(值, 字段)
 			case "!=", ">", ">=", "<", "<=":
-				m.Db = m.Db.Where(fmt.Sprintf("%s %s ?", v.Name, v.Op), v.Value)
+				m.Db = m.Db.Where(fmt.Sprintf("%s %s ?", v.Name, upperOp), v.Value)
 			case "BETWEEN":
-				if values, ok := v.Value.([]any); ok && len(values) == 2 {
-					if !v.Nullable && (IsZero(values[0]) || IsZero(values[1])) {
-						continue
-					}
-					m.Db = m.Db.Where(fmt.Sprintf("%s BETWEEN ? AND ?", v.Name), values[0], values[1])
-				} else {
-					m.Error = fmt.Errorf("BETWEEN requires a slice of 2 values")
+				values, ok := v.Value.([]any)
+				if !ok || len(values) != 2 {
+					m.Error = errors.New("BETWEEN requires a slice of 2 values")
 					return m
 				}
+				if !v.Nullable && (IsZero(values[0]) || IsZero(values[1])) {
+					continue
+				}
+				m.Db = m.Db.Where(fmt.Sprintf("%s BETWEEN ? AND ?", v.Name), values[0], values[1])
 			default:
-				m.Db = m.Db.Where(fmt.Sprintf("%s = ?", v.Name), v.Value)
+				if v.Nullable && IsZero(v.Value) {
+					m.Db = m.Db.Where(fmt.Sprintf("%s IS NULL", v.Name))
+				} else {
+					m.Db = m.Db.Where(fmt.Sprintf("%s = ?", v.Name), v.Value)
+				}
 			}
 		}
 	}
@@ -55,21 +68,30 @@ func (m *Model) Where(data []Where) *Model {
 	return m
 }
 
-// isNilOrEmpty 判断 Value 是否为 nil 或空值（使用 IsZero 优化）
 func IsZero(value any) bool {
 	if value == nil {
 		return true
 	}
 
 	v := reflect.ValueOf(value)
-
-	// 处理指针类型
-	if v.Kind() == reflect.Ptr {
-		if v.IsNil() {
-			return true
-		}
-		v = v.Elem()
+	// 处理*any指针（新增：优先解引用接口指针）
+	if v.Kind() == reflect.Pointer && v.Elem().Kind() == reflect.Interface {
+		v = v.Elem().Elem() // 解引用：*any → any → 实际值
+		return v.IsZero()
 	}
 
+	for {
+		switch v.Kind() {
+		case reflect.Pointer, reflect.Interface, reflect.Slice, reflect.Map, reflect.Chan, reflect.Func:
+			if v.IsNil() {
+				return true
+			}
+			if v.Kind() == reflect.Pointer {
+				v = v.Elem()
+				continue
+			}
+		}
+		break
+	}
 	return v.IsZero()
 }

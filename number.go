@@ -61,7 +61,7 @@ func GenerateRandomIndexes(max, count int) []int {
 
 	// 创建索引池
 	indexPool := make([]int, max)
-	for i := 0; i < max; i++ {
+	for i := range max {
 		indexPool[i] = i
 	}
 
@@ -72,4 +72,30 @@ func GenerateRandomIndexes(max, count int) []int {
 
 	// 返回前count个索引
 	return indexPool[:count]
+}
+
+// 地球平均半径（米）
+const EarthRadiusMeters = 6371000.0
+
+// 计算两个经纬度之间的距离（米）
+func DistanceInMeters(lat1, lon1, lat2, lon2 float64) float64 {
+	// 将角度转换为弧度
+	lat1Rad := lat1 * math.Pi / 180
+	lon1Rad := lon1 * math.Pi / 180
+	lat2Rad := lat2 * math.Pi / 180
+	lon2Rad := lon2 * math.Pi / 180
+
+	// 差值
+	dLat := lat2Rad - lat1Rad
+	dLon := lon2Rad - lon1Rad
+
+	// Haversine公式
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1Rad)*math.Cos(lat2Rad)*
+			math.Sin(dLon/2)*math.Sin(dLon/2)
+
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+
+	// 返回距离（米）
+	return EarthRadiusMeters * c
 }

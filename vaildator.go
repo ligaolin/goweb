@@ -82,7 +82,7 @@ func Validator(data any) error {
 	v := reflect.ValueOf(data)
 
 	// 如果 data 是指针类型，解引用指针
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		if v.IsNil() {
 			return fmt.Errorf("validator: expected a non-nil pointer, got nil")
 		}
