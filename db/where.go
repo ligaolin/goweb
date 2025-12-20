@@ -61,11 +61,6 @@ func IsZero(value any) bool {
 	}
 
 	v := reflect.ValueOf(value)
-	// 处理*any指针（新增：优先解引用接口指针）
-	if v.Kind() == reflect.Pointer && v.Elem().Kind() == reflect.Interface {
-		v = v.Elem().Elem() // 解引用：*any → any → 实际值
-		return v.IsZero()
-	}
 
 	for {
 		switch v.Kind() {
