@@ -21,7 +21,10 @@ func (m *Model) Where(data []Where) *Model {
 	}
 
 	for _, v := range data {
-		if (v.Nullable && v.Value != nil) || (!v.Nullable && !IsZero(v.Value)) {
+		if v.Value != nil {
+			continue
+		}
+		if v.Nullable || (!v.Nullable && !IsZero(v.Value)) {
 			upperOp := strings.ToUpper(v.Op)
 			switch upperOp {
 			case "IN":
