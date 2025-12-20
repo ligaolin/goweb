@@ -21,10 +21,7 @@ func (m *Model) Where(data []Where) *Model {
 	}
 
 	for _, v := range data {
-		if v.Value == nil {
-			continue
-		}
-		if v.Nullable || (!v.Nullable && !IsZero(v.Value)) {
+		if (v.Nullable && !IsAnyNil(v.Value)) || (!v.Nullable && !IsZero(v.Value)) {
 			upperOp := strings.ToUpper(v.Op)
 			switch upperOp {
 			case "IN":
@@ -56,6 +53,14 @@ func (m *Model) Where(data []Where) *Model {
 	}
 
 	return m
+}
+
+func IsAnyNil(a any) bool {
+	if a == nil {
+		return true
+	}
+	v := reflect.ValueOf(a)
+	return (v.Kind() == reflect.Pointer || v.Kind() == reflect.Interface) && v.IsNil()
 }
 
 func IsZero(value any) bool {
