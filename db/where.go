@@ -25,23 +25,14 @@ func (m *Model) Where(data []Where) *Model {
 			upperOp := strings.ToUpper(v.Op)
 			switch upperOp {
 			case "IN":
-				if !v.Nullable && IsZero(v.Value) {
-					continue
-				}
 				m.Db = m.Db.Where(fmt.Sprintf("%s IN ?", v.Name), v.Value)
 			case "LIKE", "NOT LIKE":
-				if !v.Nullable && IsZero(v.Value) {
-					continue
-				}
 				m.Db = m.Db.Where(fmt.Sprintf("%s %s ?", v.Name, upperOp), fmt.Sprintf("%%%s%%", v.Value))
 			case "IS NULL":
 				m.Db = m.Db.Where(fmt.Sprintf("%s IS NULL", v.Name))
 			case "IS NOT NULL":
 				m.Db = m.Db.Where(fmt.Sprintf("%s IS NOT NULL", v.Name))
 			case "FIND_IN_SET":
-				if !v.Nullable && IsZero(v.Value) {
-					continue
-				}
 				m.Db = m.Db.Where("FIND_IN_SET(?, ?)", v.Value, v.Name) // 注意参数顺序：FIND_IN_SET(值, 字段)
 			case "!=", ">", ">=", "<", "<=":
 				m.Db = m.Db.Where(fmt.Sprintf("%s %s ?", v.Name, upperOp), v.Value)
@@ -56,11 +47,7 @@ func (m *Model) Where(data []Where) *Model {
 				}
 				m.Db = m.Db.Where(fmt.Sprintf("%s BETWEEN ? AND ?", v.Name), values[0], values[1])
 			default:
-				if v.Nullable && IsZero(v.Value) {
-					m.Db = m.Db.Where(fmt.Sprintf("%s IS NULL", v.Name))
-				} else {
-					m.Db = m.Db.Where(fmt.Sprintf("%s = ?", v.Name), v.Value)
-				}
+				m.Db = m.Db.Where(fmt.Sprintf("%s = ?", v.Name), v.Value)
 			}
 		}
 	}
