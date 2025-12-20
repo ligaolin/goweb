@@ -60,10 +60,7 @@ func (m *Model) WhereNil(data *[]WhereNil) *Model {
 				}
 				m.Db = m.Db.Where(fmt.Sprintf("%s BETWEEN ? AND ?", v.Name), values[0], values[1])
 			default:
-				// 特殊处理：如果实际值是nil（如指针nil），转为IS NULL
-				if IsZero(actualValue) && reflect.ValueOf(v.Value).Kind() == reflect.Ptr {
-					m.Db = m.Db.Where(fmt.Sprintf("%s IS NULL", v.Name))
-				} else {
+				if reflect.ValueOf(v.Value).Kind() != reflect.Pointer {
 					m.Db = m.Db.Where(fmt.Sprintf("%s = ?", v.Name), actualValue)
 				}
 			}
