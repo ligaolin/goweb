@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -156,6 +157,42 @@ func (h *Http) PostJSON(jsonData any, result any) error {
 		return err
 	}
 
+	if result != nil {
+		if err := json.Unmarshal(data, result); err != nil {
+			return fmt.Errorf("解析JSON失败: %w, 响应内容: %s", err, string(data))
+		}
+	}
+
+	return nil
+}
+
+// PostMultipart 发送 multipart/form-data 请求
+func (h *Http) PostMultipart(formBuilder func(w *multipart.Writer) error, result any) error {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	// 执行表单构建逻辑（由调用方实现）
+	if err := formBuilder(writer); err != nil {
+		return fmt.Errorf("构建multipart表单失败: %w", err)
+	}
+
+	// 关闭writer（生成最终的boundary）
+	if err := writer.Close(); err != nil {
+		return fmt.Errorf("关闭multipart writer失败: %w", err)
+	}
+
+	// 设置multipart请求头
+	headers := map[string]string{
+		"Content-Type": writer.FormDataContentType(),
+	}
+
+	// 执行POST请求
+	data, err := h.Do("", "POST", headers, body)
+	if err != nil {
+		return err
+	}
+
+	// 解析响应
 	if result != nil {
 		if err := json.Unmarshal(data, result); err != nil {
 			return fmt.Errorf("解析JSON失败: %w, 响应内容: %s", err, string(data))
