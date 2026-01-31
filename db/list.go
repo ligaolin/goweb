@@ -9,7 +9,7 @@ type ListData struct {
 }
 
 // 查询列表
-func (m *Model) List(data *ListData) *Model {
+func (m *Model[T]) List(data *ListData) *Model[T] {
 	if m.Error != nil {
 		return m
 	}

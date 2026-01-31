@@ -7,7 +7,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func (m *Model) FindChildrenID(ids *[]int32, pidName string) *Model {
+func (m *Model[T]) FindChildrenID(ids *[]int32, pidName string) *Model[T] {
 	if m.Error != nil {
 		return m
 	}
@@ -26,7 +26,7 @@ func (m *Model) FindChildrenID(ids *[]int32, pidName string) *Model {
 	}
 	return m
 }
-func (m *Model) FindChildren(pid any, idName, pidName, childrenName, order string) *Model {
+func (m *Model[T]) FindChildren(pid any, idName, pidName, childrenName, order string) *Model[T] {
 	if m.Error != nil {
 		return m
 	}
@@ -87,9 +87,9 @@ func (m *Model) FindChildren(pid any, idName, pidName, childrenName, order strin
 		}
 
 		childrenSlice := reflect.New(reflect.SliceOf(elemType)).Interface()
-		childModel := &Model{
+		childModel := &Model[T]{
 			Db:    db, // 使用新的会话
-			Model: childrenSlice,
+			Model: childrenSlice.(T),
 		}
 
 		// 递归查询

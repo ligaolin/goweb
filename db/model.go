@@ -10,23 +10,23 @@ import (
 	"gorm.io/gorm"
 )
 
-type Model struct {
+type Model[T any] struct {
 	Db     *gorm.DB
 	Error  error
 	Pk     int32
 	PkName string
-	Model  any
+	Model  T
 }
 
-func NewModel(db *gorm.DB, model any) *Model {
-	return &Model{
+func NewModel[T any](db *gorm.DB, model T) *Model[T] {
+	return &Model[T]{
 		Db:     db,
 		PkName: "id",
 		Model:  model,
 	}
 }
 
-func (m *Model) SetPkName(pkName string) *Model {
+func (m *Model[T]) SetPkName(pkName string) *Model[T] {
 	if m.Error != nil {
 		return m
 	}
@@ -34,7 +34,7 @@ func (m *Model) SetPkName(pkName string) *Model {
 	return m
 }
 
-func (m *Model) SetPk(pk int32) *Model {
+func (m *Model[T]) SetPk(pk int32) *Model[T] {
 	if m.Error != nil {
 		return m
 	}
@@ -50,7 +50,7 @@ func (m *Model) SetPk(pk int32) *Model {
 	return m
 }
 
-func (m *Model) SetModel(db *gorm.DB) *Model {
+func (m *Model[T]) SetModel(db *gorm.DB) *Model[T] {
 	if m.Error != nil {
 		return m
 	}
@@ -65,7 +65,7 @@ func (m *Model) SetModel(db *gorm.DB) *Model {
 	return m
 }
 
-func (m *Model) Copy(param any) *Model {
+func (m *Model[T]) Copy(param any) *Model[T] {
 	if m.Error != nil {
 		return m
 	}
@@ -76,13 +76,13 @@ func (m *Model) Copy(param any) *Model {
 	return m
 }
 
-type Same struct {
+type Same[T any] struct {
 	Db      *gorm.DB
 	Message string
 }
 
 // 唯一性判断
-func (m *Model) NotSame(sames *[]Same) *Model {
+func (m *Model[T]) NotSame(sames *[]Same[T]) *Model[T] {
 	if m.Error != nil {
 		return m
 	}
@@ -101,7 +101,7 @@ func (m *Model) NotSame(sames *[]Same) *Model {
 	return m
 }
 
-func (m *Model) Save() *Model {
+func (m *Model[T]) Save() *Model[T] {
 	if m.Error != nil {
 		return m
 	}
@@ -114,7 +114,7 @@ func (m *Model) Save() *Model {
 }
 
 // 更新
-func (m *Model) Update(field string, value any, containsas []string) *Model {
+func (m *Model[T]) Update(field string, value any, containsas []string) *Model[T] {
 	if m.Error != nil {
 		return m
 	}
@@ -135,7 +135,7 @@ func (m *Model) Update(field string, value any, containsas []string) *Model {
 }
 
 // 删除
-func (m *Model) Delete(id any) *Model {
+func (m *Model[T]) Delete(id any) *Model[T] {
 	if m.Error != nil {
 		return m
 	}
@@ -148,7 +148,7 @@ func (m *Model) Delete(id any) *Model {
 }
 
 // 生成唯一随机码
-func (m *Model) Code(n int, field string) (string, error) {
+func (m *Model[T]) Code(n int, field string) (string, error) {
 	for {
 		code := goweb.GenerateRandomAlphanumeric(n)
 		var count int64

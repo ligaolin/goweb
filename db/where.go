@@ -15,7 +15,7 @@ type Where struct {
 }
 
 // 将 Where 结构体转换为安全的 SQL where 子句和参数
-func (m *Model) Where(data []Where) *Model {
+func (m *Model[T]) Where(data []Where) *Model[T] {
 	if m.Error != nil {
 		return m
 	}
