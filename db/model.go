@@ -76,13 +76,13 @@ func (m *Model[T]) Copy(param any) *Model[T] {
 	return m
 }
 
-type Same[T any] struct {
+type Same struct {
 	Db      *gorm.DB
 	Message string
 }
 
 // 唯一性判断
-func (m *Model[T]) NotSame(sames *[]Same[T]) *Model[T] {
+func (m *Model[T]) NotSame(sames *[]Same) *Model[T] {
 	if m.Error != nil {
 		return m
 	}
