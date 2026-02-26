@@ -148,9 +148,21 @@ func (m *Model[T]) Delete(id any) *Model[T] {
 }
 
 // 生成唯一随机码
-func (m *Model[T]) Code(n int, field string) (string, error) {
+func (m *Model[T]) Code(n int32, field string) (string, error) {
 	for {
-		code := goweb.GenerateRandomAlphanumeric(n)
+		code := goweb.GenerateRandomAlphanumeric(int(n))
+		var count int64
+		m.Db.Model(m.Model).Where(field+" = ?", code).Count(&count)
+		if count == 0 {
+			return code, nil
+		}
+	}
+}
+
+// 生成唯一数字
+func (m *Model[T]) Number(n int32, field string) (int32, error) {
+	for {
+		code := goweb.Random(n)
 		var count int64
 		m.Db.Model(m.Model).Where(field+" = ?", code).Count(&count)
 		if count == 0 {
