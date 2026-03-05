@@ -29,7 +29,7 @@ func (m *Model[T]) Where(data []Where) *Model[T] {
 			case "IN":
 				m.Db = m.Db.Where(fmt.Sprintf("%s IN ?", v.Name), realValue)
 			case "LIKE", "NOT LIKE":
-				m.Db = m.Db.Where(fmt.Sprintf("%s %s ?", v.Name, upperOp), fmt.Sprintf("%%%s%%", realValue))
+				m.Db = m.Db.Where(fmt.Sprintf("%s %s ?", v.Name, upperOp), fmt.Sprintf("%%%v%%", realValue))
 			case "IS NULL":
 				m.Db = m.Db.Where(fmt.Sprintf("%s IS NULL", v.Name))
 			case "IS NOT NULL":
