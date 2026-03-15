@@ -34,7 +34,7 @@ type ModelUpdatedAt struct {
 }
 
 type ModelDeleteAt struct {
-	DeleteAt Time `gorm:"column:delete_at;comment:删除时间" json:"delete_at"`
+	DeletedAt Time `gorm:"column:deleted_at;comment:删除时间" json:"deleted_at"`
 }
 
 type ModelSort struct {
