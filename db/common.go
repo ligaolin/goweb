@@ -33,7 +33,7 @@ type ModelUpdatedAt struct {
 	UpdatedAt Time `gorm:"column:updated_at;autoUpdateTime:milli;comment:更新时间" json:"updated_at"`
 }
 
-type ModelDeleteAt struct {
+type ModelDeletedAt struct {
 	DeletedAt Time `gorm:"column:deleted_at;comment:删除时间" json:"deleted_at"`
 }
 
