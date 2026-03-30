@@ -1,6 +1,7 @@
 package file
 
 import (
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"image"
@@ -84,6 +85,67 @@ func (f *Files) Upload(file *multipart.FileHeader, dir string, l Limit) (*File, 
 	}, nil
 }
 
+func (f *Files) Base64ToFile(b64 string, dir string, l Limit) (*File, error) {
+	b64 = strings.TrimPrefix(b64, "data:")
+	parts := strings.SplitN(b64, ";base64,", 2)
+	extension := filepath.Ext(parts[0])
+	baseName := parts[0]
+	if len(extension) > 0 {
+		extension = extension[1:]
+		baseName = parts[0][:len(parts[0])-len(extension)-1]
+	}
+	mime := parts[0]
+	types := strings.Split(mime, "/")[0]
+
+	if types != "image" && types != "video" {
+		types = "other"
+	}
+
+	// 上传限制
+	err := limit(extension, types, int64(len(parts[1])), l)
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取文件保存路径
+	path, err := f.GetPath(dir, types)
+	if err != nil {
+		return nil, err
+	}
+	path += "/" + fmt.Sprintf("%d", time.Now().UnixNano()) + "." + extension
+
+	// 保存文件
+	bytes, err := base64.StdEncoding.DecodeString(parts[1])
+	if err != nil {
+		return nil, err
+	}
+
+	// 写入文件
+	err = os.WriteFile(path, bytes, 0644)
+	if err != nil {
+		return nil, err
+	}
+
+	// 获取文件访问域名
+	base, err := Domain(f.Request, f.Config.Domain)
+	if err != nil {
+		return nil, err
+	}
+
+	return &File{
+		Name:      baseName,
+		Extension: extension,
+		FullName:  parts[0],
+		Path:      "/" + path,
+		Url:       base + "/" + path,
+		Size:      int64(len(parts[1])),
+		Type:      types,
+		IsDir:     false,
+		ModTime:   time.Now().Format("2006-01-02 15:04:05"),
+		Mime:      mime,
+	}, nil
+}
+
 // 获取文件保存路径
 func (f *Files) GetPath(dir string, types string) (string, error) {
 	if dir == "" {
@@ -117,15 +179,16 @@ type Limit struct {
 
 // 上传限制
 func limit(extension string, types string, size int64, l Limit) error {
-	if types == "image" {
+	switch types {
+	case "image":
 		if l.ImageMaxSize*1024*1024 < size {
 			return fmt.Errorf("图片不能超过%dM", l.ImageMaxSize)
 		}
-	} else if types == "video" {
+	case "video":
 		if l.VideoMaxSize*1024*1024 < size {
 			return fmt.Errorf("视频不能超过%dM", l.VideoMaxSize)
 		}
-	} else {
+	default:
 		if l.OtherMaxSize*1024*1024 < size {
 			return fmt.Errorf("文件不能超过%dM", l.OtherMaxSize)
 		}
