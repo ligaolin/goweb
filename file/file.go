@@ -89,7 +89,7 @@ func (f *Files) Base64ToFile(b64 string, dir string, l Limit) (*File, error) {
 	b64 = strings.TrimPrefix(b64, "data:")
 	parts := strings.SplitN(b64, ";base64,", 2)
 	types := strings.Split(parts[0], "/")[0]
-	extension := strings.TrimPrefix(parts[0], ".")
+	extension := strings.TrimPrefix(parts[0], "/")
 	if types != "image" && types != "video" {
 		types = "other"
 	}
