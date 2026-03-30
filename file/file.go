@@ -88,15 +88,8 @@ func (f *Files) Upload(file *multipart.FileHeader, dir string, l Limit) (*File, 
 func (f *Files) Base64ToFile(b64 string, dir string, l Limit) (*File, error) {
 	b64 = strings.TrimPrefix(b64, "data:")
 	parts := strings.SplitN(b64, ";base64,", 2)
-	extension := filepath.Ext(parts[0])
-	baseName := parts[0]
-	if len(extension) > 0 {
-		extension = extension[1:]
-		baseName = parts[0][:len(parts[0])-len(extension)-1]
-	}
-	mime := parts[0]
-	types := strings.Split(mime, "/")[0]
-
+	types := strings.Split(parts[0], "/")[0]
+	extension := strings.TrimPrefix(parts[0], ".")
 	if types != "image" && types != "video" {
 		types = "other"
 	}
@@ -112,7 +105,8 @@ func (f *Files) Base64ToFile(b64 string, dir string, l Limit) (*File, error) {
 	if err != nil {
 		return nil, err
 	}
-	path += "/" + fmt.Sprintf("%d", time.Now().UnixNano()) + "." + extension
+	baseName := fmt.Sprintf("%d", time.Now().UnixNano())
+	path += "/" + baseName + "." + extension
 
 	// 保存文件
 	bytes, err := base64.StdEncoding.DecodeString(parts[1])
@@ -135,14 +129,14 @@ func (f *Files) Base64ToFile(b64 string, dir string, l Limit) (*File, error) {
 	return &File{
 		Name:      baseName,
 		Extension: extension,
-		FullName:  parts[0],
+		FullName:  baseName + "." + extension,
 		Path:      "/" + path,
 		Url:       base + "/" + path,
 		Size:      int64(len(parts[1])),
 		Type:      types,
 		IsDir:     false,
 		ModTime:   time.Now().Format("2006-01-02 15:04:05"),
-		Mime:      mime,
+		Mime:      parts[0],
 	}, nil
 }
 
