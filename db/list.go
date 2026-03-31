@@ -29,8 +29,8 @@ func (m *Model[T]) List(data *ListData) *Model[T] {
 		}
 		m.Db = m.Db.Offset(int((data.Page - 1) * data.PageSize))
 	}
-	if data.PageSize > 100 {
-		data.PageSize = 100
+	if data.PageSize > 1000 {
+		data.PageSize = 1000
 	}
 	if data.PageSize > 0 {
 		m.Db = m.Db.Limit(int(data.PageSize))
