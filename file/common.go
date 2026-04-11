@@ -7,7 +7,7 @@ type File struct {
 	Path      string `json:"path"`      // 文件保存路径
 	Url       string `json:"url"`       // 文件访问路径
 	Size      int64  `json:"size"`      // 文件大小
-	Type      string `json:"type"`      // 文件类型：image、video、other、dir
+	FileType  string `json:"file_type"` // 文件类型：image、video、other、dir
 	IsDir     bool   `json:"is_dir"`    // 是否是文件夹
 	ModTime   string `json:"mod_time"`  // 修改时间
 	Mime      string `json:"mime"`      // 文件mime
