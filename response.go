@@ -61,6 +61,13 @@ func (r *Response) ErrorMessage(message string) {
 	r.Response()
 }
 
+func (r *Response) ErrorMessageData(message string, data any) {
+	r.Message = message
+	r.Code = 400
+	r.Data = data
+	r.Response()
+}
+
 func (r *Response) LoginError(err error) {
 	r.Message = err.Error()
 	r.Code = 401
