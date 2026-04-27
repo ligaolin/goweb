@@ -61,8 +61,8 @@ func (r *Response) ErrorMessage(message string) {
 	r.Response()
 }
 
-func (r *Response) ErrorMessageData(message string, data any) {
-	r.Message = message
+func (r *Response) ErrorData(err error, data any) {
+	r.Message = err.Error()
 	r.Code = 400
 	r.Data = data
 	r.Response()
