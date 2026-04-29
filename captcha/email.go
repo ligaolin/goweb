@@ -25,7 +25,7 @@ func NewEmail(c *cache.Client, e *email.Email) *Email {
 
 func (c *Email) Generate(email any, expir time.Duration) (string, error) {
 	value := Value{
-		Code:    fmt.Sprintf("%d", goweb.Random(6)),
+		Code:    fmt.Sprintf("%d", goweb.Random64(6)),
 		Carrier: email.(string),
 	}
 	uuid, err := c.Client.Set("captcha-email", value, expir)

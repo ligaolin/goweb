@@ -28,7 +28,7 @@ func NewSms(c *cache.Client, a *ali.AliSms) *Sms {
 
 func (s *Sms) Generate(mobile any, expir time.Duration) (string, error) {
 	value := Value{
-		Code:    fmt.Sprintf("%d", goweb.Random(6)),
+		Code:    fmt.Sprintf("%d", goweb.Random64(6)),
 		Carrier: mobile.(string),
 	}
 	uuid, err := s.Client.Set("captcha-sms", value, expir)

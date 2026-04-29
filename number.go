@@ -11,8 +11,15 @@ import (
  * @description: 生成指定位数随机整数
  * @param {int32} n 位数
  */
-func Random(n int32) int32 {
-	return rand.New(rand.NewSource(time.Now().UnixNano())).Int31n(int32(math.Pow10(int(n))))
+func Random64(n int32) int64 {
+	if n <= 0 {
+		n = 1
+	}
+	if n > 18 { // int64 最大支持18位数
+		n = 18
+	}
+	maxValue := int64(math.Pow10(int(n)))
+	return rand.New(rand.NewSource(time.Now().UnixNano())).Int63n(maxValue)
 }
 
 /**

@@ -160,9 +160,9 @@ func (m *Model[T]) Code(n int32, field string) (string, error) {
 }
 
 // 生成唯一数字
-func (m *Model[T]) Number(n int32, field string) (int32, error) {
+func (m *Model[T]) Number(n int32, field string) (int64, error) {
 	for {
-		code := goweb.Random(n)
+		code := goweb.Random64(n)
 		var count int64
 		m.Db.Model(m.Model).Where(field+" = ?", code).Count(&count)
 		if count == 0 {
