@@ -170,3 +170,15 @@ func (m *Model[T]) Number(n int32, field string) (int64, error) {
 		}
 	}
 }
+
+// 生成唯一数字
+func (m *Model[T]) NumberToString(n int32, field string) (string, error) {
+	for {
+		code := fmt.Sprintf("%d", goweb.Random64(n))
+		var count int64
+		m.Db.Model(m.Model).Where(field+" = ?", code).Count(&count)
+		if count == 0 {
+			return code, nil
+		}
+	}
+}
