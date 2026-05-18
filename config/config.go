@@ -21,15 +21,14 @@ func LoadConfig(path string, cfg any) error {
 	ext := filepath.Ext(path)
 	switch ext {
 	case ".json":
-		loadJSON(path, cfg)
+		return loadJSON(path, cfg)
 	case ".toml":
-		loadTOML(path, cfg)
+		return loadTOML(path, cfg)
 	case ".yaml", ".yml":
-		loadYAML(path, cfg)
+		return loadYAML(path, cfg)
 	default:
 		return fmt.Errorf("不支持的文件类型: %s", ext)
 	}
-	return nil
 }
 
 // loadJSON 加载 JSON 配置文件
