@@ -13,8 +13,8 @@ import (
 // LoadConfig 从指定路径加载配置文件，并绑定到cfg上
 func LoadConfig(path string, cfg any) error {
 	// 检查文件是否存在
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil
+	if _, err := os.Stat(path); err != nil {
+		return err
 	}
 
 	// 根据文件扩展名选择解析器
