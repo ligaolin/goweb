@@ -15,6 +15,7 @@ type File struct {
 }
 
 type FileConfig struct {
-	Domain string `json:"domain" toml:"domain" yaml:"domain"` // 域名
-	Static string `json:"static" toml:"static" yaml:"static"` // 静态文件目录
+	Domain        string `json:"domain"`         // 域名
+	Static        string `json:"static"`         // 静态文件目录
+	IncludeStatic bool   `json:"include_static"` // 访问路径是否包含静态目录
 }

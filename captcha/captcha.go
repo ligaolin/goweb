@@ -15,7 +15,7 @@ type OutputCaptcha interface {
 }
 
 type CaptchaConfig struct {
-	Expir int64 `json:"expir" toml:"expir" yaml:"expir"` // 过期时间
+	Expir int64 `json:"expir"` // 过期时间
 }
 
 type Value struct {

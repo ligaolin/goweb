@@ -11,12 +11,12 @@ import (
 )
 
 type WechatPayConfig struct {
-	AppID      string `json:"app_id" toml:"app_id" yaml:"app_id"`
-	MchID      string `json:"mch_id" toml:"mch_id" yaml:"mch_id"`
-	SerialNo   string `json:"serial_no" toml:"serial_no" yaml:"serial_no"`
-	ApiV3Key   string `json:"api_v3_key" toml:"api_v3_key" yaml:"api_v3_key"`
-	PrivateKey string `json:"private_key" toml:"private_key" yaml:"private_key"` // 文件路径
-	NotifyUrl  string `json:"notify_url" toml:"notify_url" yaml:"notify_url"`
+	AppID      string `json:"app_id"` // 应用ID
+	MchID      string `json:"mch_id"`
+	SerialNo   string `json:"serial_no"`
+	ApiV3Key   string `json:"api_v3_key"`
+	PrivateKey string `json:"private_key"` // 文件路径
+	NotifyUrl  string `json:"notify_url"`
 }
 
 type WechatMerchant struct {
