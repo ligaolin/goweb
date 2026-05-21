@@ -15,7 +15,7 @@ type File struct {
 }
 
 type FileConfig struct {
-	Domain        string `json:"domain"`         // 域名
-	Static        string `json:"static"`         // 静态文件目录
-	IncludeStatic bool   `json:"include_static"` // 访问路径是否包含静态目录
+	Domain           string `json:"domain"`             // 域名
+	Static           string `json:"static"`             // 静态文件目录
+	NotIncludeStatic bool   `json:"not_include_static"` // 访问路径是否不包含静态目录
 }
