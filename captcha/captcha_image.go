@@ -10,10 +10,10 @@ import (
 )
 
 type ImageConfig struct {
-	Width      int `json:"width" toml:"width" yaml:"width"`
-	Height     int `json:"height" toml:"height" yaml:"height"`
-	Length     int `json:"length" toml:"length" yaml:"length"`
-	NoiseCount int `json:"noise_count" toml:"noise_count" yaml:"noise_count"` // 噪点数量
+	Width      int `json:"width"`
+	Height     int `json:"height"`
+	Length     int `json:"length"`
+	NoiseCount int `json:"noise_count"` // 噪点数量
 }
 type Image struct {
 	Client *cache.Client

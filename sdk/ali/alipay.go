@@ -12,11 +12,11 @@ import (
 )
 
 type AliPayConfig struct {
-	AppID               string `json:"app_id" toml:"app_id" yaml:"app_id"`
-	PrivateKey          string `json:"private_key" toml:"private_key" yaml:"private_key"`                                  // 文件路径
-	AppPublicCert       string `json:"app_public_cert" toml:"app_public_cert" yaml:"app_public_cert"`                      // 文件路径
-	AlipayRootCert      string `json:"alipay_root_cert" toml:"alipay_root_cert" yaml:"alipay_root_cert"`                   // 文件路径
-	AlipayCertPublicKey string `json:"alipay_cert_public_key" toml:"alipay_cert_public_key" yaml:"alipay_cert_public_key"` // 文件路径
+	AppID               string `json:"app_id"`                 // 应用ID
+	PrivateKey          string `json:"private_key"`            // 文件路径
+	AppPublicCert       string `json:"app_public_cert"`        // 文件路径
+	AlipayRootCert      string `json:"alipay_root_cert"`       // 文件路径
+	AlipayCertPublicKey string `json:"alipay_cert_public_key"` // 文件路径
 }
 
 type AliPay struct {

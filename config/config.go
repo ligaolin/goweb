@@ -13,23 +13,22 @@ import (
 // LoadConfig 从指定路径加载配置文件，并绑定到cfg上
 func LoadConfig(path string, cfg any) error {
 	// 检查文件是否存在
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil
+	if _, err := os.Stat(path); err != nil {
+		return err
 	}
 
 	// 根据文件扩展名选择解析器
 	ext := filepath.Ext(path)
 	switch ext {
 	case ".json":
-		loadJSON(path, cfg)
+		return loadJSON(path, cfg)
 	case ".toml":
-		loadTOML(path, cfg)
+		return loadTOML(path, cfg)
 	case ".yaml", ".yml":
-		loadYAML(path, cfg)
+		return loadYAML(path, cfg)
 	default:
 		return fmt.Errorf("不支持的文件类型: %s", ext)
 	}
-	return nil
 }
 
 // loadJSON 加载 JSON 配置文件

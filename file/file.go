@@ -71,6 +71,9 @@ func (f *Files) Upload(file *multipart.FileHeader, dir string, l Limit) (*File, 
 		return nil, err
 	}
 
+	if f.Config.NotIncludeStatic {
+		path = strings.TrimPrefix(path, f.Config.Static+"/")
+	}
 	return &File{
 		Name:      baseName,
 		Extension: extension,
@@ -127,6 +130,9 @@ func (f *Files) Base64ToFile(b64 string, dir string, l Limit) (*File, error) {
 		return nil, err
 	}
 
+	if f.Config.NotIncludeStatic {
+		path = strings.TrimPrefix(path, f.Config.Static+"/")
+	}
 	return &File{
 		Name:      baseName,
 		Extension: extension,
@@ -257,6 +263,10 @@ func (f *Files) List(param ListParam) (*ListRes, error) {
 		}
 
 		path := "/" + param.Path + "/" + name
+
+		if f.Config.NotIncludeStatic {
+			path = strings.TrimPrefix(path, f.Config.Static+"/")
+		}
 		list = append(list, File{
 			Name:      baseName,
 			Extension: extension,
