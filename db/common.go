@@ -38,11 +38,11 @@ type ModelDeletedAt struct {
 }
 
 type ModelSort struct {
-	Sort int32 `gorm:"column:sort;type:bigint;default:100;comment:排序" json:"sort"`
+	Sort int32 `gorm:"column:sort;type:bigint;default:100;comment:排序;index" json:"sort"`
 }
 
 type ModelState struct {
-	State int32 `gorm:"column:state;type:int;default:1;comment:状态:1-开启,2-关闭" json:"state"`
+	State int32 `gorm:"column:state;type:int;default:1;comment:状态:1-开启,2-关闭;index" json:"state"`
 }
 
 type ModelHasChildren struct {
@@ -50,7 +50,7 @@ type ModelHasChildren struct {
 }
 
 type ModelChildren[T any] struct {
-	PID      int32 `gorm:"column:pid;type:bigint;default:0;comment:父级id" json:"pid"`
-	Level    int32 `gorm:"column:level;type:int;default:1;comment:层级" json:"level"`
+	PID      int32 `gorm:"column:pid;type:bigint;default:0;comment:父级id;index" json:"pid"`
+	Level    int32 `gorm:"column:level;type:int;default:1;comment:层级;index" json:"level"`
 	Children []T   `gorm:"-:migration;foreignKey:pid;references:id" json:"children"`
 }
