@@ -1,5 +1,7 @@
 package db
 
+import "gorm.io/gorm"
+
 type ListData struct {
 	Data      any   `json:"data"`
 	Total     int32 `json:"total"`      // 总数量
@@ -16,7 +18,7 @@ func (m *Model[T]) List(data *ListData) *Model[T] {
 
 	// 查询总数
 	var total int64
-	if err := m.Db.Model(m.Model).Count(&total).Error; err != nil {
+	if err := m.Db.Session(&gorm.Session{NewDB: true}).Table("(?) as t", m.Db.Model(m.Model)).Count(&total).Error; err != nil {
 		m.Error = err
 		return m
 	}
