@@ -3,11 +3,12 @@ package db
 import "gorm.io/gorm"
 
 type ListData struct {
-	Data      any   `json:"data"`
-	Total     int32 `json:"total"`      // 总数量
-	TotalPage int32 `json:"total_page"` // 总页数
-	Page      int32 `json:"page"`
-	PageSize  int32 `json:"page_size"`
+	Data             any   `json:"data"`
+	Total            int32 `json:"total"`      // 总数量
+	TotalPage        int32 `json:"total_page"` // 总页数
+	Page             int32 `json:"page"`
+	PageSize         int32 `json:"page_size"`
+	CountUseSubQuery bool  `json:"count_use_sub_query"`
 }
 
 // 查询列表
@@ -18,9 +19,16 @@ func (m *Model[T]) List(data *ListData) *Model[T] {
 
 	// 查询总数
 	var total int64
-	if err := m.Db.Session(&gorm.Session{NewDB: true}).Table("(?) as t", m.Db.Model(m.Model)).Count(&total).Error; err != nil {
-		m.Error = err
-		return m
+	if data.CountUseSubQuery {
+		if err := m.Db.Session(&gorm.Session{NewDB: true}).Table("(?) as t", m.Db.Model(m.Model)).Count(&total).Error; err != nil {
+			m.Error = err
+			return m
+		}
+	} else {
+		if err := m.Db.Model(m.Model).Count(&total).Error; err != nil {
+			m.Error = err
+			return m
+		}
 	}
 	data.Total = int32(total)
 
