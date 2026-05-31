@@ -102,7 +102,11 @@ func (db *Backup) Backup() error {
 			}
 
 			if insertSQL.Len() == 0 {
-				insertSQL.WriteString("INSERT INTO `" + table + "` (`" + strings.Join(columns, "`, `") + "`) VALUES \n\t(")
+				insertSQL.WriteString("INSERT INTO `")
+				insertSQL.WriteString(table)
+				insertSQL.WriteString("` (`")
+				insertSQL.WriteString(strings.Join(columns, "`, `"))
+				insertSQL.WriteString("`) VALUES \n\t(")
 			} else {
 				insertSQL.WriteString(",\n\t(")
 			}

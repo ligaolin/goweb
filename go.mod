@@ -21,7 +21,9 @@ require (
 	github.com/mojocn/base64Captcha v1.3.8
 	github.com/redis/go-redis/v9 v9.14.0
 	github.com/zeromicro/go-zero v1.9.2
+	go.uber.org/zap v1.24.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
+	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gorm.io/gorm v1.31.0
 	sigs.k8s.io/yaml v1.6.0
 )
@@ -67,7 +69,9 @@ require (
 	github.com/ugorji/go/codec v1.3.0 // indirect
 	go.opentelemetry.io/otel v1.24.0 // indirect
 	go.opentelemetry.io/otel/trace v1.24.0 // indirect
+	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
+	go.uber.org/multierr v1.9.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/arch v0.20.0 // indirect
 	golang.org/x/crypto v0.40.0 // indirect
