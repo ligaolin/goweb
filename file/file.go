@@ -47,7 +47,7 @@ func (f *Files) Upload(file *multipart.FileHeader, dir string, l Limit) (*File, 
 	}
 
 	// 上传限制
-	err := limit(extension, types, file.Size, l)
+	err := limit(extension, types, file.Size, l, baseName)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (f *Files) Base64ToFile(b64 string, dir string, l Limit) (*File, error) {
 	}
 
 	// 上传限制
-	err := limit(extension, types, int64(len(parts[1])), l)
+	err := limit(extension, types, int64(len(parts[1])), l, "")
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,15 @@ type Limit struct {
 }
 
 // 上传限制
-func limit(extension string, types string, size int64, l Limit) error {
+func limit(extension string, types string, size int64, l Limit, upName string) error {
+	if size == 0 {
+		return fmt.Errorf("不能上传空文件")
+	}
+
+	if len(upName) > 255 {
+		return fmt.Errorf("文件名不能超过255个字符")
+	}
+
 	switch types {
 	case "image":
 		if l.ImageMaxSize*1024*1024 < size {
