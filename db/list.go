@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"reflect"
 
 	"gorm.io/gorm"
@@ -97,6 +98,17 @@ func W(where string, value any) func(db *gorm.DB) *gorm.DB {
 		}
 
 		db.Where(where, value)
+		return db
+	}
+}
+
+func Like(where string, value any) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		if isNilOrZero(value) {
+			return db
+		}
+
+		db.Where(where, fmt.Sprintf("%%%v%%", value))
 		return db
 	}
 }
