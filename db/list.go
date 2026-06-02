@@ -1,9 +1,6 @@
 package db
 
 import (
-	"fmt"
-	"reflect"
-
 	"gorm.io/gorm"
 )
 
@@ -65,76 +62,4 @@ func (m *Model[T]) List(data *ListData) *Model[T] {
 	}
 
 	return m
-}
-
-type ListResult struct {
-	Data     any   `json:"data"`
-	Total    int64 `json:"total"` // 总数量
-	Page     int32 `json:"page"`
-	PageSize int32 `json:"page_size"`
-}
-
-func Paginate(page, pageSize *int32) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		if *pageSize > 1000 {
-			*pageSize = 1000
-		} else if *pageSize <= 0 {
-			*pageSize = 10
-		}
-		if *page > 0 {
-			db.Offset(int((*page - 1) * *pageSize))
-		}
-		if *pageSize > 0 {
-			db.Limit(int(*pageSize))
-		}
-		return db
-	}
-}
-
-func W(where string, value any) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		if isNilOrZero(value) {
-			return db
-		}
-
-		db.Where(where, value)
-		return db
-	}
-}
-
-func Like(where string, value any) func(db *gorm.DB) *gorm.DB {
-	return func(db *gorm.DB) *gorm.DB {
-		if isNilOrZero(value) {
-			return db
-		}
-
-		db.Where(where, fmt.Sprintf("%%%v%%", value))
-		return db
-	}
-}
-
-func isNilOrZero(v any) bool {
-	if v == nil {
-		return true
-	}
-
-	val := reflect.ValueOf(v)
-	switch val.Kind() {
-	case reflect.Ptr, reflect.Interface:
-		return val.IsNil()
-	case reflect.String:
-		return val.String() == ""
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return val.Int() == 0
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return val.Uint() == 0
-	case reflect.Float32, reflect.Float64:
-		return val.Float() == 0
-	case reflect.Bool:
-		return !val.Bool()
-	case reflect.Slice, reflect.Map, reflect.Array:
-		return val.Len() == 0
-	default:
-		return false
-	}
 }
