@@ -185,6 +185,10 @@ func limit(extension string, types string, size int64, l Limit, upName string) e
 		return fmt.Errorf("不能上传空文件")
 	}
 
+	if strings.Contains(upName, ".") {
+		return fmt.Errorf("扩展名异常")
+	}
+
 	if len(upName) > 255 {
 		return fmt.Errorf("文件名不能超过255个字符")
 	}
