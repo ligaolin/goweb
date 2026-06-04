@@ -90,6 +90,19 @@ func (u *Upload) SetDir(dir string) *Upload {
 	return u
 }
 
+func (u *Upload) VerifType(t string) *Upload {
+	if u.Error != nil || t == "" {
+		return u
+	}
+
+	if (t == "image" || t == "video") && t != u.File.FileType {
+		u.Error = errors.New("文件类型不匹配")
+		return u
+	}
+
+	return u
+}
+
 func (u *Upload) Save(compress bool) *Upload {
 	if u.Error != nil {
 		return u
