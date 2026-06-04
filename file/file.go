@@ -40,7 +40,7 @@ func (f *Files) Upload(file *multipart.FileHeader, dir string, l Limit) (*File, 
 		baseName = file.Filename[:len(file.Filename)-len(extension)-1]
 	}
 	mime := file.Header.Get("Content-Type")
-	types := strings.Split(mime, "/")[0]
+	types, _, _ := strings.Cut(mime, "/")
 
 	if types != "image" && types != "video" {
 		types = "other"
@@ -92,7 +92,7 @@ func (f *Files) Upload(file *multipart.FileHeader, dir string, l Limit) (*File, 
 func (f *Files) Base64ToFile(b64 string, dir string, l Limit) (*File, error) {
 	b64 = strings.TrimPrefix(b64, "data:")
 	parts := strings.SplitN(b64, ";base64,", 2)
-	types := strings.Split(parts[0], "/")[0]
+	types, _, _ := strings.Cut(parts[0], "/")
 	extension := strings.Split(parts[0], "/")[1]
 	if types != "image" && types != "video" {
 		types = "other"
