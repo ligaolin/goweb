@@ -3,27 +3,46 @@ package file
 import (
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
+	"image/png"
 	"io"
 	"mime/multipart"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
-type Upload struct {
-	fileHeader  *multipart.FileHeader
-	basePath    string
-	pathHasBase bool
-	domain      string
-	File        *File
-	Error       error
+const UPLOAD_DIR = "upload"
+
+type Config struct {
+	MaxImageSize int64    // 最大图片大小
+	MaxVideoSize int64    // 最大视频大小
+	MaxOtherSize int64    // 最大其他文件大小
+	Extensions   []string // 允许的文件扩展名
+	BasePath     string   // 基础路径
+	PathHasBase  bool     // 访问路径是否包含基础路径
+	Domain       string   // 域名
 }
 
-func NewUpload(file *multipart.FileHeader) *Upload {
+type Upload struct {
+	fileHeader *multipart.FileHeader
+	config     *Config
+	Dir        string
+	File       *File
+	Error      error
+}
+
+func NewUpload(file *multipart.FileHeader, config *Config) *Upload {
 	now := time.Now()
+	config.BasePath = strings.TrimPrefix(config.BasePath, "\\/")
 	u := &Upload{
+		config:     config,
 		fileHeader: file,
 		File: &File{
 			FullName: file.Filename,
@@ -33,6 +52,10 @@ func NewUpload(file *multipart.FileHeader) *Upload {
 			Mime:     file.Header.Get("Content-Type"),
 		},
 	}
+	if err := u.detectMimeType(); err != nil {
+		u.Error = err
+		return u
+	}
 	extension := filepath.Ext(file.Filename)
 	u.File.Name = strings.TrimSuffix(file.Filename, extension)
 	u.File.Extension = strings.TrimPrefix(extension, ".")
@@ -41,7 +64,7 @@ func NewUpload(file *multipart.FileHeader) *Upload {
 		u.File.FileType = "other"
 	}
 	u.File.Type = u.File.FileType
-	u.File.Path = fmt.Sprintf("upload/%s/%s/%d%s", u.File.FileType, now.Format("2006/01/02"), now.UnixNano(), extension)
+	u.Dir = fmt.Sprintf("%s/%s/%s", UPLOAD_DIR, u.File.FileType, now.Format("2006/01/02"))
 	return u
 }
 
@@ -50,59 +73,51 @@ func (u *Upload) SetDir(dir string) *Upload {
 		return u
 	}
 
-	if strings.Contains(dir, "..") {
-		u.Error = errors.New("路径不能包含“..”")
+	if len(dir) > 200 { // 路径长度限制
+		u.Error = errors.New("路径过长")
 		return u
 	}
 
-	u.File.Path = fmt.Sprintf("%s/%d", dir, time.Now().UnixNano())
-	if u.File.Extension != "" {
-		u.File.Path += "." + u.File.Extension
+	u.Dir = strings.TrimLeft(strings.TrimPrefix(strings.TrimLeft(dir, "\\/"), u.config.BasePath), "\\/")
+	if !strings.HasPrefix(u.Dir, UPLOAD_DIR) {
+		u.Dir = UPLOAD_DIR + "/" + u.Dir
 	}
 
-	return u
-}
-
-func (u *Upload) SetBaseDir(basePath string, pathHasBase bool) *Upload {
-	if u.Error != nil || basePath == "" {
+	if strings.Contains(u.Dir, "..") || filepath.IsAbs(u.Dir) {
+		u.Error = errors.New("无效的路径")
 		return u
-	}
-
-	u.basePath = basePath
-	u.pathHasBase = pathHasBase
-	if pathHasBase {
-		u.File.Path = filepath.Join(basePath, u.File.Path)
 	}
 	return u
 }
 
-func (u *Upload) SetUrl(domain string) *Upload {
-	if u.Error != nil || domain == "" {
-		return u
-	}
-	u.File.Url = domain + "/" + u.File.Path
-	return u
-}
-
-func (u *Upload) Save() *Upload {
+func (u *Upload) Save(compress bool) *Upload {
 	if u.Error != nil {
 		return u
 	}
 
-	if u.domain != "" {
-		u.File.Url = u.domain + "/" + u.File.Path
+	name := uuid.New().String()
+	dst := u.config.BasePath + "/" + u.Dir + "/" + name
+	if u.File.Extension != "" {
+		dst += "." + u.File.Extension
 	}
-	dst := u.File.Path
-	if !u.pathHasBase {
-		dst = filepath.Join(u.basePath, dst)
+	if u.config.PathHasBase {
+		u.File.Path = "/" + dst
+	} else {
+		u.File.Path = fmt.Sprintf("/%s/%s", u.Dir, name)
+		if u.File.Extension != "" {
+			u.File.Path += "." + u.File.Extension
+		}
+	}
+
+	if u.config.Domain != "" {
+		u.File.Url = u.config.Domain + u.File.Path
 	}
 
 	// 创建文件目录
-	if err := os.MkdirAll(filepath.Dir(strings.TrimPrefix(dst, "/")), os.ModePerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), os.ModePerm); err != nil {
 		u.Error = err
 		return u
 	}
-	// u.Error = c.SaveUploadedFile(u.fileHeader, dst)
 
 	fileReader, err := u.fileHeader.Open()
 	if err != nil {
@@ -119,31 +134,40 @@ func (u *Upload) Save() *Upload {
 	}
 	defer destFile.Close()
 
-	if _, err = fileReader.Seek(0, io.SeekStart); err != nil {
-		// 如果Seek失败，重新打开文件
-		fileReader.Close()
-		fileReader, err = u.fileHeader.Open()
+	saved := false
+
+	// 压缩图片
+	if compress && u.File.FileType == "image" {
+		fileReader.Seek(0, io.SeekStart) // 需要重置文件指针到开头
+		if img, kind, err := image.Decode(fileReader); err == nil {
+			switch kind {
+			case "jpeg":
+				err = jpeg.Encode(destFile, img, &jpeg.Options{Quality: 80})
+			case "png":
+				err = png.Encode(destFile, img)
+			}
+			if err == nil {
+				saved = true
+				if info, err := destFile.Stat(); err == nil {
+					u.File.Size = info.Size()
+				}
+			}
+		}
+	}
+
+	if !saved {
+		fileReader.Seek(0, io.SeekStart)
+		_, err = io.Copy(destFile, fileReader)
 		if err != nil {
 			u.Error = err
 			return u
 		}
-		defer fileReader.Close()
-	}
-
-	// 复制文件内容
-	_, err = io.Copy(destFile, fileReader)
-	if err != nil {
-		u.Error = err
-	}
-
-	if !strings.HasPrefix(u.File.Path, "/") {
-		u.File.Path = "/" + u.File.Path
 	}
 
 	return u
 }
 
-func (u *Upload) Limit(maxImageSize int64, maxVideoSize int64, maxOtherSize int64, allowExtensions []string) *Upload {
+func (u *Upload) Limit() *Upload {
 	if u.File.Size == 0 {
 		u.Error = errors.New("不能上传空文件")
 		return u
@@ -156,23 +180,23 @@ func (u *Upload) Limit(maxImageSize int64, maxVideoSize int64, maxOtherSize int6
 
 	switch u.File.FileType {
 	case "image":
-		if u.File.Size > maxImageSize*1024*1024 {
-			u.Error = fmt.Errorf("图片不能超过%dM", maxImageSize)
+		if u.File.Size > u.config.MaxImageSize*1024*1024 {
+			u.Error = fmt.Errorf("图片不能超过%dM", u.config.MaxImageSize)
 			return u
 		}
 	case "video":
-		if u.File.Size > maxVideoSize*1024*1024 {
-			u.Error = fmt.Errorf("视频不能超过%dM", maxVideoSize)
+		if u.File.Size > u.config.MaxVideoSize*1024*1024 {
+			u.Error = fmt.Errorf("视频不能超过%dM", u.config.MaxVideoSize)
 			return u
 		}
 	case "other":
-		if u.File.Size > maxOtherSize*1024*1024 {
-			u.Error = fmt.Errorf("文件不能超过%dM", maxOtherSize)
+		if u.File.Size > u.config.MaxOtherSize*1024*1024 {
+			u.Error = fmt.Errorf("文件不能超过%dM", u.config.MaxOtherSize)
 			return u
 		}
 	}
 
-	if !slices.Contains(allowExtensions, u.File.Extension) {
+	if !slices.Contains(u.config.Extensions, u.File.Extension) {
 		u.Error = fmt.Errorf("%s格式不允许上传", u.File.Extension)
 		return u
 	}
@@ -181,5 +205,24 @@ func (u *Upload) Limit(maxImageSize int64, maxVideoSize int64, maxOtherSize int6
 }
 
 func (u *Upload) GetFile() (*File, error) {
-	return u.File, u.Error
+	if u.Error != nil {
+		return nil, u.Error
+	}
+	return u.File, nil
+}
+
+func (u *Upload) detectMimeType() error {
+	fileReader, err := u.fileHeader.Open()
+	if err != nil {
+		return err
+	}
+	defer fileReader.Close()
+	buffer := make([]byte, 512)
+	_, err = fileReader.Read(buffer)
+	if err != nil {
+		return err
+	}
+	fileReader.Seek(0, io.SeekStart)
+	u.File.Mime = http.DetectContentType(buffer)
+	return nil
 }
