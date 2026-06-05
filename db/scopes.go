@@ -16,21 +16,20 @@ type ListResult struct {
 }
 
 // Paginate 分页
-func Paginate(page, pageSize *int32, options ...int32) func(db *gorm.DB) *gorm.DB {
+func Paginate(page, pageSize *int32, maxPageSize ...int32) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		if db.Error != nil {
 			return db
 		}
-		var MaxPageSize int32 = 100
-		if len(options) > 0 {
-			MaxPageSize = options[0]
+		var max int32 = 100
+		if len(maxPageSize) > 0 {
+			max = maxPageSize[0]
 		}
-		if MaxPageSize <= 0 {
-			MaxPageSize = 100
+		if max <= 0 {
+			max = 100
 		}
-
-		if *pageSize > MaxPageSize {
-			*pageSize = MaxPageSize
+		if *pageSize > max {
+			*pageSize = max
 		} else if *pageSize <= 0 {
 			*pageSize = 10
 		}
