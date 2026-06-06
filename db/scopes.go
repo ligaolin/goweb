@@ -60,7 +60,7 @@ func W(where string, value any) func(db *gorm.DB) *gorm.DB {
 }
 
 // Like 模糊查询
-func Like(where string, value any) func(db *gorm.DB) *gorm.DB {
+func Like(where string, value any, options ...string) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
 		if db.Error != nil {
 			return db
@@ -70,7 +70,12 @@ func Like(where string, value any) func(db *gorm.DB) *gorm.DB {
 			return db
 		}
 
-		db.Where(where, fmt.Sprintf("%%%v%%", value))
+		str := fmt.Sprintf("%%%v%%", value)
+		if len(options) > 0 {
+			str = fmt.Sprintf(options[0], value)
+		}
+
+		db.Where(where, str)
 		return db
 	}
 }
