@@ -101,3 +101,29 @@ func Unique(DB *gorm.DB, primaryField string, primaryKey any, message string) fu
 		return db
 	}
 }
+
+func OcaclePaginate(db *gorm.DB, data any, page, pageSize *int32, maxPageSize ...int32) error {
+	if db.Error != nil {
+		return db.Error
+	}
+	var max int32 = 100
+	if len(maxPageSize) > 0 {
+		max = maxPageSize[0]
+	}
+	if max <= 0 {
+		max = 100
+	}
+	if *pageSize > max {
+		*pageSize = max
+	} else if *pageSize <= 0 {
+		*pageSize = 10
+	}
+	if *page <= 0 {
+		*page = 1
+	}
+
+	startRow := (*page-1)*(*pageSize) + 1
+	endRow := (*page) * *pageSize
+
+	return db.Session(&gorm.Session{NewDB: true}).Debug().Raw("SELECT * FROM ( SELECT a.*, ROWNUM rn FROM (?) a WHERE ROWNUM <= ?) WHERE rn >= ?", db, endRow, startRow).Scan(data).Error
+}
