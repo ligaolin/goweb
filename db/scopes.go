@@ -43,6 +43,33 @@ func Paginate(page, pageSize *int32, maxPageSize ...int32) func(db *gorm.DB) *go
 	}
 }
 
+func Offset(offset, limit *int32, maxLimit ...int32) func(db *gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB {
+		if db.Error != nil {
+			return db
+		}
+		var max int32 = 100
+		if len(maxLimit) > 0 {
+			max = maxLimit[0]
+		}
+		if max <= 0 {
+			max = 100
+		}
+		if *limit > max {
+			*limit = max
+		} else if *limit <= 0 {
+			*limit = 10
+		}
+		if *offset > 0 {
+			db.Offset(int(*offset))
+		} else if *offset <= 0 {
+			*offset = 0
+		}
+		db.Limit(int(*limit))
+		return db
+	}
+}
+
 // Where 条件查询
 func W(where string, value any) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
