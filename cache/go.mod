@@ -1,4 +1,4 @@
-module github.com/ligaolin/goweb/cache
+module github.com/ligaolin/goweb/v2/cache
 
 go 1.26.4
 

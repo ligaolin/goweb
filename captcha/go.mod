@@ -1,20 +1,20 @@
-module github.com/ligaolin/goweb/captcha
+module github.com/ligaolin/goweb/v2/captcha
 
 go 1.26.4
 
 replace (
-	github.com/ligaolin/goweb/cache => ../cache
-	github.com/ligaolin/goweb/email => ../email
-	github.com/ligaolin/goweb/sdk/ali => ../sdk/ali
+	github.com/ligaolin/goweb/v2/cache => ../cache
+	github.com/ligaolin/goweb/v2/email => ../email
+	github.com/ligaolin/goweb/v2/sdk/ali => ../sdk/ali
 )
 
 require (
 	github.com/alibabacloud-go/dysmsapi-20170525/v5 v5.6.0
 	github.com/alibabacloud-go/tea v1.5.2
 	github.com/alibabacloud-go/tea-utils/v2 v2.0.9
-	github.com/ligaolin/goweb/cache v0.0.0-00010101000000-000000000000
-	github.com/ligaolin/goweb/email v0.0.0-00010101000000-000000000000
-	github.com/ligaolin/goweb/sdk/ali v0.0.0-00010101000000-000000000000
+	github.com/ligaolin/goweb/v2/cache v0.0.0-00010101000000-000000000000
+	github.com/ligaolin/goweb/v2/email v0.0.0-00010101000000-000000000000
+	github.com/ligaolin/goweb/v2/sdk/ali v0.0.0-00010101000000-000000000000
 	github.com/mojocn/base64Captcha v1.3.6
 )
 

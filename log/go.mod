@@ -1,4 +1,4 @@
-module github.com/ligaolin/goweb/log
+module github.com/ligaolin/goweb/v2/log
 
 go 1.26.4
 

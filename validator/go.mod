@@ -1,4 +1,4 @@
-module github.com/ligaolin/goweb/validator
+module github.com/ligaolin/goweb/v2/validator
 
 go 1.26.4
 

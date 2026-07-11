@@ -1,4 +1,4 @@
-module github.com/ligaolin/goweb/jwt
+module github.com/ligaolin/goweb/v2/jwt
 
 go 1.26.4
 

@@ -8,8 +8,8 @@ import (
 	dysmsapi20170525 "github.com/alibabacloud-go/dysmsapi-20170525/v5/client"
 	"github.com/alibabacloud-go/tea-utils/v2/service"
 	"github.com/alibabacloud-go/tea/tea"
-	"github.com/ligaolin/goweb/cache"
-	"github.com/ligaolin/goweb/sdk/ali"
+	"github.com/ligaolin/goweb/v2/cache"
+	"github.com/ligaolin/goweb/v2/sdk/ali"
 )
 
 type Sms struct {

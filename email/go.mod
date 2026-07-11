@@ -1,4 +1,4 @@
-module github.com/ligaolin/goweb/email
+module github.com/ligaolin/goweb/v2/email
 
 go 1.26.4
 

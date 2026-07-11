@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ligaolin/goweb/cache"
-	"github.com/ligaolin/goweb/email"
+	"github.com/ligaolin/goweb/v2/cache"
+	"github.com/ligaolin/goweb/v2/email"
 )
 
 type Email struct {

@@ -1,4 +1,4 @@
-module github.com/ligaolin/goweb/file
+module github.com/ligaolin/goweb/v2/file
 
 go 1.26.4
 

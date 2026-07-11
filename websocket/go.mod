@@ -1,4 +1,4 @@
-module github.com/ligaolin/goweb/websocket
+module github.com/ligaolin/goweb/v2/websocket
 
 go 1.26.4
 

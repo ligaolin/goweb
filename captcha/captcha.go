@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ligaolin/goweb/cache"
+	"github.com/ligaolin/goweb/v2/cache"
 )
 
 type Captcha[T any] struct {

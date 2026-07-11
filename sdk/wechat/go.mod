@@ -1,4 +1,4 @@
-module github.com/ligaolin/goweb/sdk/wechat
+module github.com/ligaolin/goweb/v2/sdk/wechat
 
 go 1.26.4
 

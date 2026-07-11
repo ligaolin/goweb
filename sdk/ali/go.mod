@@ -1,4 +1,4 @@
-module github.com/ligaolin/goweb/sdk/ali
+module github.com/ligaolin/goweb/v2/sdk/ali
 
 go 1.26.4
 
