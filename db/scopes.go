@@ -1,18 +1,25 @@
-package db
+﻿package db
 
 import (
 	"errors"
 	"fmt"
 
-	"github.com/ligaolin/goweb"
 	"gorm.io/gorm"
 )
 
-type ListResult struct {
-	Data     any   `json:"data"`
-	Total    int64 `json:"total"` // 总数量
-	Page     int32 `json:"page"`
-	PageSize int32 `json:"page_size"`
+// normalizePageParams 统一处理分页参数
+func normalizePageParams(page, pageSize *int32, maxVal int32) {
+	if maxVal <= 0 {
+		maxVal = 100
+	}
+	if *pageSize > maxVal {
+		*pageSize = maxVal
+	} else if *pageSize <= 0 {
+		*pageSize = 10
+	}
+	if *page <= 0 {
+		*page = 1
+	}
 }
 
 // Paginate 分页
@@ -21,24 +28,12 @@ func Paginate(page, pageSize *int32, maxPageSize ...int32) func(db *gorm.DB) *go
 		if db.Error != nil {
 			return db
 		}
-		var max int32 = 100
+		maxVal := int32(100)
 		if len(maxPageSize) > 0 {
-			max = maxPageSize[0]
+			maxVal = maxPageSize[0]
 		}
-		if max <= 0 {
-			max = 100
-		}
-		if *pageSize > max {
-			*pageSize = max
-		} else if *pageSize <= 0 {
-			*pageSize = 10
-		}
-		if *page > 0 {
-			db.Offset(int((*page - 1) * *pageSize))
-		} else if *page <= 0 {
-			*page = 1
-		}
-		db.Limit(int(*pageSize))
+		normalizePageParams(page, pageSize, maxVal)
+		db.Offset(int((*page - 1) * *pageSize)).Limit(int(*pageSize))
 		return db
 	}
 }
@@ -48,39 +43,32 @@ func Offset(offset, limit *int32, maxLimit ...int32) func(db *gorm.DB) *gorm.DB 
 		if db.Error != nil {
 			return db
 		}
-		var max int32 = 100
+		maxVal := int32(100)
 		if len(maxLimit) > 0 {
-			max = maxLimit[0]
+			maxVal = maxLimit[0]
 		}
-		if max <= 0 {
-			max = 100
+		if maxVal <= 0 {
+			maxVal = 100
 		}
-		if *limit > max {
-			*limit = max
+		if *limit > maxVal {
+			*limit = maxVal
 		} else if *limit <= 0 {
 			*limit = 10
 		}
-		if *offset > 0 {
-			db.Offset(int(*offset))
-		} else if *offset <= 0 {
+		if *offset < 0 {
 			*offset = 0
 		}
-		db.Limit(int(*limit))
+		db.Offset(int(*offset)).Limit(int(*limit))
 		return db
 	}
 }
 
 // Where 条件查询
-func W(where string, value any) func(db *gorm.DB) *gorm.DB {
+func Where(where string, value any) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		if db.Error != nil {
+		if db.Error != nil || IsNilOrZero(value) {
 			return db
 		}
-
-		if goweb.IsNilOrZero(value) {
-			return db
-		}
-
 		db.Where(where, value)
 		return db
 	}
@@ -89,20 +77,14 @@ func W(where string, value any) func(db *gorm.DB) *gorm.DB {
 // Like 模糊查询
 func Like(where string, value any, options ...string) func(db *gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB {
-		if db.Error != nil {
+		if db.Error != nil || IsNilOrZero(value) {
 			return db
 		}
-
-		if goweb.IsNilOrZero(value) {
-			return db
-		}
-
-		str := fmt.Sprintf("%%%v%%", value)
+		pattern := fmt.Sprintf("%%%v%%", value)
 		if len(options) > 0 {
-			str = fmt.Sprintf(options[0], value)
+			pattern = fmt.Sprintf(options[0], value)
 		}
-
-		db.Where(where, str)
+		db.Where(where, pattern)
 		return db
 	}
 }
@@ -113,11 +95,10 @@ func Unique(DB *gorm.DB, primaryField string, primaryKey any, message string) fu
 		if db.Error != nil {
 			return db
 		}
-
-		var count int64
-		if !goweb.IsNilOrZero(primaryKey) {
+		if !IsNilOrZero(primaryKey) {
 			DB = DB.Where(primaryField+" != ?", primaryKey)
 		}
+		var count int64
 		if err := DB.Count(&count).Error; err != nil {
 			db.Error = err
 			return db
@@ -129,28 +110,20 @@ func Unique(DB *gorm.DB, primaryField string, primaryKey any, message string) fu
 	}
 }
 
-func OcaclePaginate(db *gorm.DB, data any, page, pageSize *int32, maxPageSize ...int32) error {
+func OraclePaginate(db *gorm.DB, data any, page, pageSize *int32, maxPageSize ...int32) error {
 	if db.Error != nil {
 		return db.Error
 	}
-	var max int32 = 100
+	maxVal := int32(100)
 	if len(maxPageSize) > 0 {
-		max = maxPageSize[0]
+		maxVal = maxPageSize[0]
 	}
-	if max <= 0 {
-		max = 100
-	}
-	if *pageSize > max {
-		*pageSize = max
-	} else if *pageSize <= 0 {
-		*pageSize = 10
-	}
-	if *page <= 0 {
-		*page = 1
-	}
+	normalizePageParams(page, pageSize, maxVal)
 
 	startRow := (*page-1)*(*pageSize) + 1
 	endRow := (*page) * *pageSize
 
-	return db.Session(&gorm.Session{NewDB: true}).Debug().Raw("SELECT * FROM ( SELECT a.*, ROWNUM rn FROM (?) a WHERE ROWNUM <= ?) WHERE rn >= ?", db, endRow, startRow).Scan(data).Error
+	return db.Session(&gorm.Session{NewDB: true}).Debug().
+		Raw("SELECT * FROM ( SELECT a.*, ROWNUM rn FROM (?) a WHERE ROWNUM <= ?) WHERE rn >= ?",
+			db, endRow, startRow).Scan(data).Error
 }

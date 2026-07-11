@@ -16,18 +16,11 @@ func (t Time) MarshalJSON() ([]byte, error) {
 	return fmt.Appendf(nil, "\"%s\"", tTime.Format("2006-01-02 15:04:05")), nil
 }
 
-func (t Time) ToDateString() string {
+func (t Time) Format(layout string) string {
 	if time.Time(t).IsZero() {
 		return ""
 	}
-	return time.Time(t).Format("2006-01-02")
-}
-
-func (t Time) ToString() string {
-	if time.Time(t).IsZero() {
-		return ""
-	}
-	return time.Time(t).Format("2006-01-02 15:04:05")
+	return time.Time(t).Format(layout)
 }
 
 func (t Time) Value() (driver.Value, error) {

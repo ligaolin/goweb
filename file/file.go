@@ -1,4 +1,4 @@
-package file
+﻿package file
 
 import (
 	"encoding/base64"
@@ -16,8 +16,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-
-	"github.com/ligaolin/goweb"
 )
 
 type Files struct {
@@ -30,6 +28,15 @@ func NewFile(request *http.Request, cfg *FileConfig) *Files {
 		Request: request,
 		Config:  cfg,
 	}
+}
+
+// safePath 安全处理路径，防止目录穿越
+func (f *Files) safePath(dir string) string {
+	dir = strings.ReplaceAll(strings.TrimPrefix(dir, "/"), "/..", "")
+	if !strings.HasPrefix(dir, f.Config.Static) {
+		return ""
+	}
+	return dir
 }
 
 func (f *Files) Upload(file *multipart.FileHeader, dir string, l Limit) (*File, error) {
@@ -46,26 +53,21 @@ func (f *Files) Upload(file *multipart.FileHeader, dir string, l Limit) (*File, 
 		types = "other"
 	}
 
-	// 上传限制
-	err := limit(extension, types, file.Size, l, baseName)
-	if err != nil {
+	if err := checkLimit(extension, types, file.Size, l, baseName); err != nil {
 		return nil, err
 	}
 
-	// 获取文件保存路径
 	path, err := f.GetPath(dir, types)
 	if err != nil {
 		return nil, err
 	}
 	path += "/" + fmt.Sprintf("%d", time.Now().UnixNano()) + "." + extension
 
-	// 保存文件
 	size, err := Save(file, path, l.Compress)
 	if err != nil {
 		return nil, err
 	}
 
-	// 获取文件访问域名
 	base, err := Domain(f.Request, f.Config.Domain)
 	if err != nil {
 		return nil, err
@@ -98,13 +100,10 @@ func (f *Files) Base64ToFile(b64 string, dir string, l Limit) (*File, error) {
 		types = "other"
 	}
 
-	// 上传限制
-	err := limit(extension, types, int64(len(parts[1])), l, "")
-	if err != nil {
+	if err := checkLimit(extension, types, int64(len(parts[1])), l, ""); err != nil {
 		return nil, err
 	}
 
-	// 获取文件保存路径
 	path, err := f.GetPath(dir, types)
 	if err != nil {
 		return nil, err
@@ -112,19 +111,14 @@ func (f *Files) Base64ToFile(b64 string, dir string, l Limit) (*File, error) {
 	baseName := fmt.Sprintf("%d", time.Now().UnixNano())
 	path += "/" + baseName + "." + extension
 
-	// 保存文件
 	bytes, err := base64.StdEncoding.DecodeString(parts[1])
 	if err != nil {
 		return nil, err
 	}
-
-	// 写入文件
-	err = os.WriteFile(path, bytes, 0644)
-	if err != nil {
+	if err := os.WriteFile(path, bytes, 0644); err != nil {
 		return nil, err
 	}
 
-	// 获取文件访问域名
 	base, err := Domain(f.Request, f.Config.Domain)
 	if err != nil {
 		return nil, err
@@ -148,23 +142,19 @@ func (f *Files) Base64ToFile(b64 string, dir string, l Limit) (*File, error) {
 	}, nil
 }
 
-// 获取文件保存路径
 func (f *Files) GetPath(dir string, types string) (string, error) {
 	if dir == "" {
-		// 默认路径
 		dir = f.Config.Static + "/upload"
 		if types != "" {
 			dir += "/" + types + "/" + time.Now().Format("2006-01-02")
 		}
 	} else {
-		// 使用提供的路径，去掉文件夹中包含..的目录
-		dir = strings.ReplaceAll(strings.TrimPrefix(dir, "/"), "/..", "")
-		// 路径必须在静态目录下
-		if !goweb.StringPreIs(dir, f.Config.Static) {
+		safe := f.safePath(dir)
+		if safe == "" {
 			return "", errors.New("您上传的路径不符合规范")
 		}
+		dir = safe
 	}
-	// 创建文件目录
 	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 		return "", err
 	}
@@ -179,12 +169,10 @@ type Limit struct {
 	Compress     bool
 }
 
-// 上传限制
-func limit(extension string, types string, size int64, l Limit, upName string) error {
+func checkLimit(extension string, types string, size int64, l Limit, upName string) error {
 	if size == 0 {
 		return fmt.Errorf("不能上传空文件")
 	}
-
 	if len(upName) > 255 {
 		return fmt.Errorf("文件名不能超过255个字符")
 	}
@@ -207,7 +195,6 @@ func limit(extension string, types string, size int64, l Limit, upName string) e
 	if !slices.Contains(strings.Split(l.Extension, ","), extension) {
 		return fmt.Errorf("%s格式不支持上传", extension)
 	}
-
 	return nil
 }
 
@@ -223,7 +210,6 @@ type ListRes struct {
 }
 
 func (f *Files) List(param ListParam) (*ListRes, error) {
-	// 获取文件保存路径
 	var err error
 	param.Path, err = f.GetPath(param.Path, "")
 	if err != nil {
@@ -234,22 +220,23 @@ func (f *Files) List(param ListParam) (*ListRes, error) {
 		return nil, err
 	}
 
-	// 名称模糊查询
 	if param.Name != "" {
-		var l []os.DirEntry
+		var matched []os.DirEntry
 		for _, v := range files {
 			if strings.Contains(v.Name(), param.Name) {
-				l = append(l, v)
+				matched = append(matched, v)
 			}
 		}
-		files = l
+		files = matched
 	}
+
 	base, err := Domain(f.Request, f.Config.Domain)
 	if err != nil {
 		return nil, err
 	}
+
 	var list []File
-	total, _, res := goweb.List(int32(param.Page), int32(param.PageSize), files)
+	total, _, res := List(int32(param.Page), int32(param.PageSize), files)
 	for _, v := range res {
 		info, err := v.Info()
 		if err != nil {
@@ -271,10 +258,10 @@ func (f *Files) List(param ListParam) (*ListRes, error) {
 		}
 
 		path := "/" + param.Path + "/" + name
-
 		if f.Config.NotIncludeStatic {
 			path = strings.TrimPrefix(path, f.Config.Static+"/")
 		}
+
 		list = append(list, File{
 			Name:      baseName,
 			Extension: extension,
@@ -294,26 +281,18 @@ func (f *Files) List(param ListParam) (*ListRes, error) {
 
 func (f *Files) Delete(path string, name string) error {
 	if path == "" {
-		// 默认路径
 		path = f.Config.Static + "/upload"
 	} else {
-		// 使用提供的路径，去掉文件夹中包含..的目录
-		path = strings.ReplaceAll(strings.TrimPrefix(path, "/"), "/..", "")
-		// 路径必须在静态目录下
-		if !goweb.StringPreIs(path, f.Config.Static) {
+		safe := f.safePath(path)
+		if safe == "" {
 			return errors.New("您要删除的路径不符合规范")
 		}
+		path = safe
 	}
 	if name != "" {
 		path += "/" + name
 	}
-
-	// 删除文件夹及其内容
-	err := os.RemoveAll(path)
-	if err != nil {
-		return err
-	}
-	return nil
+	return os.RemoveAll(path)
 }
 
 func FileMimeType(path string) (string, error) {
@@ -321,24 +300,20 @@ func FileMimeType(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	mime := http.DetectContentType(buffer)
-	return mime, nil
+	return http.DetectContentType(buffer), nil
 }
 
 func Domain(r *http.Request, domain string) (string, error) {
 	if domain == "" {
 		ip, port, err := net.SplitHostPort(r.Host)
 		if err != nil {
-			// 如果无法解析端口，尝试直接使用Host
 			return "http://" + r.Host, nil
 		}
 		return "http://" + ip + ":" + port, nil
-	} else {
-		return domain, nil
 	}
+	return domain, nil
 }
 
-// 对于常见图片格式进行压缩，并保存文件
 func Save(file *multipart.FileHeader, path string, compress bool) (size int64, err error) {
 	size = file.Size
 	fileReader, err := file.Open()
@@ -347,57 +322,37 @@ func Save(file *multipart.FileHeader, path string, compress bool) (size int64, e
 	}
 	defer fileReader.Close()
 
-	// 创建目标文件
 	destFile, err := os.Create(path)
 	if err != nil {
 		return
 	}
 	defer destFile.Close()
 
-	// 如果需要压缩且是图片，我们先尝试解码
-	if compress {
-		// 创建一个临时的读取器副本用于解码
-		// 我们不改变原始的fileReader，因为后面可能还需要用它
-		fileReaderCopy, err := file.Open()
-		if err == nil {
-			defer fileReaderCopy.Close()
-
-			// 尝试解码图像
-			img, kind, decodeErr := image.Decode(fileReaderCopy)
-			if decodeErr == nil {
-				// 根据图片类型进行压缩
-				switch kind {
-				case "jpeg":
-					err = jpeg.Encode(destFile, img, &jpeg.Options{Quality: 80})
-				case "png":
-					err = png.Encode(destFile, img)
-				default:
-					// 不支持的图片格式，跳过压缩
-					compress = false
-				}
-
-				// 如果压缩成功，获取压缩后的文件大小
-				if err == nil {
-					size, _ = destFile.Seek(0, io.SeekEnd)
-					return size, nil
-				}
-			}
-		}
+	if !compress {
+		size, err = io.Copy(destFile, fileReader)
+		return
 	}
 
-	// 如果不需要压缩或压缩失败，直接复制文件
-	// 确保我们回到文件开始位置
-	if _, err = fileReader.Seek(0, io.SeekStart); err != nil {
-		// 如果Seek失败，重新打开文件
-		fileReader.Close()
-		fileReader, err = file.Open()
-		if err != nil {
-			return
-		}
-		defer fileReader.Close()
+	img, kind, decodeErr := image.Decode(fileReader)
+	if decodeErr != nil {
+		fileReader.Seek(0, io.SeekStart)
+		size, err = io.Copy(destFile, fileReader)
+		return
 	}
 
-	// 复制文件内容
-	size, err = io.Copy(destFile, fileReader)
+	switch kind {
+	case "jpeg":
+		err = jpeg.Encode(destFile, img, &jpeg.Options{Quality: 80})
+	case "png":
+		err = png.Encode(destFile, img)
+	default:
+		fileReader.Seek(0, io.SeekStart)
+		size, err = io.Copy(destFile, fileReader)
+		return
+	}
+
+	if err == nil {
+		size, _ = destFile.Seek(0, io.SeekEnd)
+	}
 	return
 }

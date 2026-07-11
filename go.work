@@ -1,0 +1,19 @@
+go 1.26.4
+
+use (
+	./data
+	./http
+	./response
+	./jwt
+	./log
+	./validator
+	./db
+	./file
+	./cache
+	./config
+	./email
+	./captcha
+	./websocket
+	./sdk/ali
+	./sdk/wechat
+)

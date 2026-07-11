@@ -17,17 +17,27 @@ func NewClient(cache Cache) *Client {
 }
 
 func (c *Client) Set(key string, v any, expir time.Duration) (string, error) {
-	uuid := uuid.New().String()
-	err := c.Cache.Set("client-"+key+uuid, v, expir)
-	return uuid, err
+	id := uuid.New().String()
+	err := c.Cache.Set(c.getKey(id, key), v, expir)
+	return id, err
 }
 
-func (c *Client) Get(uuid string, key string, value any, clear bool) error {
-	if err := c.Cache.Get("client-"+key+uuid, value); err != nil {
+func (c *Client) Get(id string, key string, value any) error {
+	return c.Cache.Get(c.getKey(id, key), value)
+}
+
+func (c *Client) GetAndDelete(id string, key string, value any) error {
+	fullKey := c.getKey(id, key)
+	if err := c.Cache.Get(fullKey, value); err != nil {
 		return err
 	}
-	if clear {
-		c.Cache.Delete("client-" + key + uuid)
-	}
-	return nil
+	return c.Cache.Delete(fullKey)
+}
+
+func (c *Client) Delete(id string, key string) error {
+	return c.Cache.Delete(c.getKey(id, key))
+}
+
+func (c *Client) getKey(id string, key string) string {
+	return "client_" + key + "_" + id
 }

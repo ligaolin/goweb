@@ -1,104 +1,129 @@
-package cache
+﻿package cache
 
 import (
 	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/gregjones/httpcache/diskcache"
 )
 
+type FileConfig struct {
+	Path string
+}
+
 type File struct {
+	mu     sync.RWMutex
 	Client *diskcache.Cache
 	Path   string
 }
 
+func NewFile(config *FileConfig) *File {
+	f := &File{
+		Client: diskcache.New(config.Path),
+		Path:   config.Path,
+	}
+	go f.startCleanup()
+	return f
+}
+
 type Value struct {
-	Expir   time.Time
-	IsExpir bool // 是否会过期，true会过期，false不会过期
-	Value   any
+	Expire    time.Time
+	HasExpire bool
+	Value     any
 }
 
 func (f *File) Get(key string, value any) error {
-	// 获取文件缓存的数据
+	f.mu.RLock()
 	str, ok := f.Client.Get(key)
+	f.mu.RUnlock()
 	if !ok {
 		return errors.New("从文件缓存获取数据失败")
 	}
 
-	// 反序列化文件缓存数据
 	var val Value
-	if err := json.Unmarshal([]byte(string(str)), &val); err != nil {
+	if err := json.Unmarshal(str, &val); err != nil {
 		return err
 	}
 
-	// 判断是否过期
-	if val.IsExpir {
-		if time.Now().After(val.Expir) {
-			f.Delete(key)
-			return errors.New("缓存数据已过期")
-		}
+	if val.HasExpire && time.Now().After(val.Expire) {
+		f.Delete(key)
+		return errors.New("缓存数据已过期")
 	}
 
-	// 反序列化存储数据
-	if err := json.Unmarshal([]byte(val.Value.(string)), value); err != nil {
+	data, err := json.Marshal(val.Value)
+	if err != nil {
 		return err
 	}
-
-	// 清理过期文件缓存
-	go f.Clean()
-	return nil
+	return json.Unmarshal(data, value)
 }
 
-func (f *File) Set(key string, value any, expir time.Duration) error {
-	valStr, err := json.Marshal(value)
-	if err != nil {
-		return err
+func (f *File) Set(key string, value any, expire time.Duration) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+
+	val := Value{
+		Value: value,
+	}
+	if expire > 0 {
+		val.HasExpire = true
+		val.Expire = time.Now().Add(expire)
 	}
 
-	isExpir := true
-	if expir <= -1 {
-		isExpir = false
-	}
-	v, err := json.Marshal(Value{Value: string(valStr), Expir: time.Now().Add(expir), IsExpir: isExpir})
+	data, err := json.Marshal(val)
 	if err != nil {
 		return err
 	}
-	f.Client.Set(key, v)
+	f.Client.Set(key, data)
 	return nil
 }
 
 func (f *File) Delete(key string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
 	f.Client.Delete(key)
 	return nil
 }
 
-// 清理过期文件缓存
-func (f *File) Clean() error {
-	files, err := os.ReadDir(f.Path)
+func (f *File) startCleanup() {
+	ticker := time.NewTicker(10 * time.Minute)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		f.cleanup()
+	}
+}
+
+func (f *File) cleanup() {
+	entries, err := os.ReadDir(f.Path)
 	if err != nil {
-		return err
+		return
 	}
 
-	var val Value
-	for _, file := range files {
-		path := filepath.Join(f.Path, file.Name())
-		bytes, err := os.ReadFile(path)
-		if err != nil {
+	for _, entry := range entries {
+		if entry.IsDir() {
 			continue
 		}
 
-		if err = json.Unmarshal(bytes, &val); err != nil {
+		key := filepath.Base(entry.Name())
+		var val Value
+
+		f.mu.RLock()
+		str, ok := f.Client.Get(key)
+		f.mu.RUnlock()
+		if !ok {
 			continue
 		}
 
-		if val.IsExpir {
-			if time.Now().After(val.Expir) {
-				os.Remove(path)
-			}
+		if err := json.Unmarshal(str, &val); err != nil {
+			continue
+		}
+
+		if val.HasExpire && time.Now().After(val.Expire) {
+			f.Delete(key)
 		}
 	}
-	return nil
 }

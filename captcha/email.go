@@ -1,12 +1,10 @@
-package captcha
+﻿package captcha
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/ligaolin/goweb"
 	"github.com/ligaolin/goweb/cache"
 	"github.com/ligaolin/goweb/email"
 )
@@ -23,46 +21,42 @@ func NewEmail(c *cache.Client, e *email.Email) *Email {
 	}
 }
 
-func (c *Email) Generate(email any, expir time.Duration) (string, error) {
-	value := Value{
-		Code:    fmt.Sprintf("%d", goweb.Random64(6)),
-		Carrier: email.(string),
+func (e *Email) Generate(carrier string, expir time.Duration) (string, error) {
+	code := generateCode()
+	v := value{
+		Code:    code,
+		Carrier: carrier,
 	}
-	uuid, err := c.Client.Set("captcha-email", value, expir)
+	uuid, err := e.Client.Set("captcha-email", v, expir)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("存储邮箱验证码失败: %w", err)
 	}
-
-	if err = c.SendEmailCode(email.(string), value.Code, "邮件验证码", expir); err != nil {
-		return "", err
+	if err := e.sendEmailCode(carrier, code, expir); err != nil {
+		return "", fmt.Errorf("发送邮箱验证码失败: %w", err)
 	}
 	return uuid, nil
 }
 
-func (e *Email) Verify(email any, uuid string, code string) error {
-	var val Value
-	if err := e.Client.Get(uuid, "captcha-email", &val, false); err != nil {
-		return errors.New("验证码不存在或过期")
+func (e *Email) Verify(carrier string, uuid string, code string) error {
+	var val value
+	if err := e.Client.GetAndDelete(uuid, "captcha-email", &val); err != nil {
+		return fmt.Errorf("验证码不存在或已过期: %w", err)
 	}
 	if !strings.EqualFold(val.Code, code) {
-		return errors.New("验证码错误")
+		return fmt.Errorf("验证码错误")
 	}
-	if val.Carrier != email.(string) {
-		return errors.New("不是接收验证码的邮箱")
+	if val.Carrier != carrier {
+		return fmt.Errorf("不是接收验证码的邮箱")
 	}
 	return nil
 }
 
-func (e *Email) SendEmailCode(to string, code string, subject string, expir time.Duration) error {
-	return e.Email.Send([]string{to}, subject, fmt.Sprintf(`尊敬的用户：
+func (e *Email) Delete(uuid string) error {
+	return e.Client.Delete(uuid, "captcha-email")
+}
 
-	您好！
-	您正在进行邮箱验证操作，验证码为：%s。
-	此验证码有效期为 %.f分钟，请尽快完成验证。
-	
-	如非本人操作，请忽略此邮件。
-	
-	感谢您的支持！
-	
-	【系统邮件，请勿直接回复】`, code, expir.Minutes()))
+func (e *Email) sendEmailCode(to string, code string, expir time.Duration) error {
+	subject := "邮箱验证码"
+	body := fmt.Sprintf("您好！\n\n您的验证码为：%s。\n此验证码有效期为 %.f 分钟，请尽快完成验证。\n\n如非本人操作，请忽略此邮件。", code, expir.Minutes())
+	return e.Email.Send([]string{to}, subject, body)
 }

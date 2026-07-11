@@ -1,22 +1,13 @@
 package cache
 
 import (
-	"context"
 	"time"
-
-	"github.com/gregjones/httpcache/diskcache"
-	"github.com/redis/go-redis/v9"
 )
 
 type Cache interface {
-	// 从缓存中获取数据
-	Get(key string, value any) error
-
-	// 将数据存入缓存
-	Set(key string, value any, expir time.Duration) error
-
-	// 从缓存中删除数据
-	Delete(key string) error
+	Get(key string, value any) error                       // 从缓存中获取数据
+	Set(key string, value any, expire time.Duration) error // 将数据存入缓存
+	Delete(key string) error                               // 从缓存中删除数据
 }
 
 type Config struct {
@@ -25,26 +16,11 @@ type Config struct {
 	Redis *RedisConfig
 }
 
-type FileConfig struct {
-	Path string
-}
-
-type RedisConfig struct {
-	Addr     string
-	Password string
-}
-
 func New(config *Config) Cache {
 	switch config.Use {
 	case "redis":
-		return &Redis{
-			Context: context.Background(),
-			Client:  redis.NewClient(&redis.Options{Addr: config.Redis.Addr, Password: config.Redis.Password}),
-		}
+		return NewRedis(config.Redis)
 	default:
-		return &File{
-			Client: diskcache.New(config.File.Path),
-			Path:   config.File.Path,
-		}
+		return NewFile(config.File)
 	}
 }
