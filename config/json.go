@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func NewJSON[T any](path string) (*Config[T], error) {
+func NewJSON[T any](path string) (*T, error) {
 	file, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("读取配置文件失败: %w", err)
@@ -15,5 +15,9 @@ func NewJSON[T any](path string) (*Config[T], error) {
 	if err := json.Unmarshal(file, &cfg); err != nil {
 		return nil, fmt.Errorf("解析json类型配置文件失败: %w", err)
 	}
-	return &Config[T]{data: &cfg}, nil
+	return &cfg, nil
+}
+
+func LoadJSON[T any](path string) (*T, error) {
+	return load(path, NewJSON[T])
 }

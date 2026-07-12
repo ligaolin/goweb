@@ -1,17 +1,17 @@
 package config
 
-type Config[T any] struct {
-	data *T
-}
+import "sync"
 
-func (c *Config[T]) Get() *T {
-	return c.data
-}
+var instances sync.Map
 
-func (c *Config[T]) Clone() *T {
-	if c.data == nil {
-		return nil
+func load[T any](path string, fn func(string) (*T, error)) (*T, error) {
+	if v, ok := instances.Load(path); ok {
+		return v.(*T), nil
 	}
-	clone := *c.data
-	return &clone
+	cfg, err := fn(path)
+	if err != nil {
+		return nil, err
+	}
+	instances.Store(path, cfg)
+	return cfg, nil
 }
