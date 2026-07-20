@@ -68,6 +68,83 @@ func NewUpload(file *multipart.FileHeader, config *Config) *Upload {
 	return u
 }
 
+// Update 更新文件：根据指定路径，先保存新文件到临时位置，
+// 再删除原文件，最后将新文件移动到目标路径（防止出错后文件丢失）
+func (f *Files) Update(file *multipart.FileHeader, path string, l Limit) (*File, error) {
+	// 安全校验：路径不能包含".."，防止目录遍历攻击
+	if strings.Contains(path, "..") {
+		return nil, errors.New("路径包含非法字符")
+	}
+
+	// 解析文件信息
+	extension := filepath.Ext(file.Filename)
+	baseName := file.Filename
+	if len(extension) > 0 {
+		extension = extension[1:]
+		baseName = file.Filename[:len(file.Filename)-len(extension)-1]
+	}
+	mime := file.Header.Get("Content-Type")
+	types, _, _ := strings.Cut(mime, "/")
+	if types != "image" && types != "video" {
+		types = "other"
+	}
+
+	// 上传限制
+	err := limit(extension, types, file.Size, l, baseName)
+	if err != nil {
+		return nil, err
+	}
+
+	// 构造完整文件系统路径
+	fullPath := f.Config.Static + "/" + strings.TrimPrefix(path, "/")
+
+	// 确保目标目录存在
+	dir := filepath.Dir(fullPath)
+	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+		return nil, err
+	}
+
+	// 先保存新文件到临时路径（防止原文件删除后新文件保存失败）
+	tempPath := fullPath + ".tmp"
+	size, err := Save(file, tempPath, l.Compress)
+	if err != nil {
+		return nil, err
+	}
+
+	// 删除原文件（如果存在）
+	if _, statErr := os.Stat(fullPath); statErr == nil {
+		if err := os.Remove(fullPath); err != nil {
+			os.Remove(tempPath)
+			return nil, err
+		}
+	}
+
+	// 将临时文件重命名为目标路径
+	if err := os.Rename(tempPath, fullPath); err != nil {
+		return nil, err
+	}
+
+	// 获取文件访问域名
+	base, err := Domain(f.Request, f.Config.Domain)
+	if err != nil {
+		return nil, err
+	}
+
+	relativePath := strings.TrimPrefix(fullPath, f.Config.Static)
+	return &File{
+		Name:      baseName,
+		Extension: extension,
+		FullName:  file.Filename,
+		Path:      "/" + relativePath,
+		Url:       base + "/" + relativePath,
+		Size:      size,
+		Type:      types,
+		IsDir:     false,
+		ModTime:   time.Now().Format("2006-01-02 15:04:05"),
+		Mime:      mime,
+	}, nil
+}
+
 func (u *Upload) SetDir(dir string) *Upload {
 	if u.Error != nil || dir == "" {
 		return u
