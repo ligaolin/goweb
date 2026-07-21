@@ -1,4 +1,4 @@
-package file
+﻿package file
 
 import (
 	"errors"
@@ -68,81 +68,114 @@ func NewUpload(file *multipart.FileHeader, config *Config) *Upload {
 	return u
 }
 
-// Update 更新文件：根据指定路径，先保存新文件到临时位置，
-// 再删除原文件，最后将新文件移动到目标路径（防止出错后文件丢失）
-func (f *Files) Update(file *multipart.FileHeader, path string, l Limit) (*File, error) {
-	// 安全校验：路径不能包含".."，防止目录遍历攻击
-	if strings.Contains(path, "..") {
-		return nil, errors.New("路径包含非法字符")
+// Update 更新文件到指定路径：先保存新文件到临时路径，再删除旧文件，最后移动到目标路径
+// targetPath 为目标文件路径（相对于 BasePath 或绝对路径均可），避免出错后原文件丢失
+func (u *Upload) Update(targetPath string, compress bool) *Upload {
+	if u.Error != nil {
+		return u
+	}
+	originPath := targetPath
+
+	// 安全判断：不能包含.. 防止路径穿越到项目外
+	if strings.Contains(targetPath, "..") {
+		u.Error = errors.New("路径不合法，不能包含..")
+		return u
 	}
 
-	// 解析文件信息
-	extension := filepath.Ext(file.Filename)
-	baseName := file.Filename
-	if len(extension) > 0 {
-		extension = extension[1:]
-		baseName = file.Filename[:len(file.Filename)-len(extension)-1]
+	// 路径不能为空
+	if targetPath == "" {
+		u.Error = errors.New("目标路径不能为空")
+		return u
 	}
-	mime := file.Header.Get("Content-Type")
-	types, _, _ := strings.Cut(mime, "/")
-	if types != "image" && types != "video" {
-		types = "other"
-	}
+	// targetPath = strings.TrimLeft(strings.TrimPrefix(strings.TrimPrefix(targetPath, "/"), u.config.BasePath), "\\/")
 
-	// 上传限制
-	err := limit(extension, types, file.Size, l, baseName)
-	if err != nil {
-		return nil, err
+	// 完整目标路径
+	// dst := u.config.BasePath + "/" + targetPath
+	if !u.config.PathHasBase {
+		targetPath = "/" + u.config.BasePath + "/" + targetPath
 	}
-
-	// 构造完整文件系统路径
-	fullPath := f.Config.Static + "/" + strings.TrimPrefix(path, "/")
+	targetPath = strings.TrimPrefix(targetPath, "/")
 
 	// 确保目标目录存在
-	dir := filepath.Dir(fullPath)
-	if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-		return nil, err
+	if err := os.MkdirAll(filepath.Dir(targetPath), os.ModePerm); err != nil {
+		u.Error = err
+		return u
 	}
 
-	// 先保存新文件到临时路径（防止原文件删除后新文件保存失败）
-	tempPath := fullPath + ".tmp"
-	size, err := Save(file, tempPath, l.Compress)
+	// 先保存到临时路径
+	tempPath := targetPath + ".tmp." + fmt.Sprintf("%d", time.Now().UnixNano())
+
+	fileReader, err := u.fileHeader.Open()
 	if err != nil {
-		return nil, err
+		u.Error = err
+		return u
 	}
+	defer fileReader.Close()
 
-	// 删除原文件（如果存在）
-	if _, statErr := os.Stat(fullPath); statErr == nil {
-		if err := os.Remove(fullPath); err != nil {
-			os.Remove(tempPath)
-			return nil, err
+	destFile, err := os.Create(tempPath)
+	if err != nil {
+		u.Error = err
+		return u
+	}
+	defer destFile.Close()
+
+	saved := false
+	if compress && u.File.FileType == "image" {
+		fileReader.Seek(0, io.SeekStart)
+		if img, kind, err := image.Decode(fileReader); err == nil {
+			switch kind {
+			case "jpeg":
+				err = jpeg.Encode(destFile, img, &jpeg.Options{Quality: 80})
+			case "png":
+				err = png.Encode(destFile, img)
+			}
+			if err == nil {
+				saved = true
+				if info, err := destFile.Stat(); err == nil {
+					u.File.Size = info.Size()
+				}
+			}
 		}
 	}
 
-	// 将临时文件重命名为目标路径
-	if err := os.Rename(tempPath, fullPath); err != nil {
-		return nil, err
+	if !saved {
+		fileReader.Seek(0, io.SeekStart)
+		_, err = io.Copy(destFile, fileReader)
+		if err != nil {
+			os.Remove(tempPath)
+			u.Error = err
+			return u
+		}
+	}
+	destFile.Close()
+
+	// 删除旧文件（放最后删除，避免出错后原文件丢失）
+	if err := os.Remove(targetPath); err != nil && !os.IsNotExist(err) {
+		os.Remove(tempPath)
+		u.Error = err
+		return u
 	}
 
-	// 获取文件访问域名
-	base, err := Domain(f.Request, f.Config.Domain)
-	if err != nil {
-		return nil, err
+	// 确保目标目录存在（Windows 上 os.Rename 要求目录必须存在，且不能跨卷）
+	if err := os.MkdirAll(filepath.Dir(targetPath), os.ModePerm); err != nil {
+		os.Remove(tempPath)
+		u.Error = err
+		return u
 	}
 
-	relativePath := strings.TrimPrefix(fullPath, f.Config.Static)
-	return &File{
-		Name:      baseName,
-		Extension: extension,
-		FullName:  file.Filename,
-		Path:      "/" + relativePath,
-		Url:       base + "/" + relativePath,
-		Size:      size,
-		Type:      types,
-		IsDir:     false,
-		ModTime:   time.Now().Format("2006-01-02 15:04:05"),
-		Mime:      mime,
-	}, nil
+
+	// 移动临时文件到目标路径
+	if err := os.Rename(tempPath, targetPath); err != nil {
+		os.Remove(tempPath)
+		u.Error = err
+		return u
+	}
+	u.File.Path = originPath
+	if u.config.Domain != "" {
+		u.File.Url = u.config.Domain + originPath
+	}
+
+	return u
 }
 
 func (u *Upload) SetDir(dir string) *Upload {
