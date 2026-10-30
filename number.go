@@ -4,11 +4,10 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
-	"time"
 )
 
 /**
- * @description: 生成指定位数随机整数
+ * @description: 生成指定位数随机整数（严格 n 位，首位不为 0）
  * @param {int32} n 位数
  */
 func Random64(n int32) int64 {
@@ -18,8 +17,15 @@ func Random64(n int32) int64 {
 	if n > 18 { // int64 最大支持18位数
 		n = 18
 	}
-	maxValue := int64(math.Pow10(int(n)))
-	return rand.New(rand.NewSource(time.Now().UnixNano())).Int63n(maxValue)
+	// 10^(n-1)，n 位数的最小值
+	minValue := int64(1)
+	for i := int32(0); i < n-1; i++ {
+		minValue *= 10
+	}
+	// 10^n，n 位数的上限（不包含）
+	maxValue := minValue * 10
+	// 返回 [minValue, maxValue) 的随机数，保证是 n 位
+	return minValue + rand.Int63n(maxValue-minValue)
 }
 
 /**
@@ -28,16 +34,24 @@ func Random64(n int32) int64 {
  * @param {int} max 最大值，不包含
  */
 func RandomInt(min int, max int) int {
+	// 参数保护，避免 panic
+	if max <= min {
+		return min
+	}
 	// 生成[min, max)范围的随机数
 	return rand.Intn(max-min) + min
 }
 
 /**
  * @description: 生成随机数，指定范围
- * @param {int} min 最小值，包含
- * @param {int} max 最大值，不包含
+ * @param {float64} start 最小值，包含
+ * @param {float64} end 最大值，不包含
  */
 func RandomFloat(start float64, end float64) float64 {
+	// 参数保护
+	if end <= start {
+		return start
+	}
 	return start + rand.Float64()*(end-start)
 }
 
